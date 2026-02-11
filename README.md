@@ -21,6 +21,7 @@ avec une **barre horizontale colorée (seuils) au-dessus du graphe**.
 
 ```yaml
 bar:
+  align: center  # left|center|right
   width: 92     # % (10–100)
   height: 6     # px (2–20)
   good: "#45d58e"
@@ -41,6 +42,7 @@ preset: pm25
 entity: sensor.air_pm2_5
 name: PM2.5
 bar:
+  align: center  # left|center|right
   width: 90
   height: 8
   good: "#2ecc71"
