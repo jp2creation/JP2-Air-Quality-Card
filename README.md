@@ -44,3 +44,90 @@ type: custom:jp2-air-quality
 preset: radon
 entity: sensor.wave_plus_couloir_radon
 name: Radon
+```
+
+### VOC / TVOC
+```yaml
+type: custom:jp2-air-quality
+preset: voc
+entity: sensor.wave_plus_couloir_voc
+name: COV
+```
+
+### PM2.5
+```yaml
+type: custom:jp2-air-quality
+preset: pm25
+entity: sensor.air_pm2_5
+name: PM2.5
+pm25:
+  good_max: 12
+  warn_max: 35.4
+```
+
+### Pressure
+```yaml
+type: custom:jp2-air-quality
+preset: pressure
+entity: sensor.pression_exterieure
+name: Pression
+pressure:
+  offset: 27
+  min: 970
+  max: 1050
+  fair_min: 995
+  good_min: 1005
+  good_max: 1025
+  fair_max: 1035
+```
+
+## Advanced overrides example
+```yaml
+type: custom:jp2-air-quality
+preset: radon
+entity: sensor.wave_plus_couloir_radon
+
+secondary: >
+  {% set v = states(entity) | float(none) %}
+  {{ '%.0f'|format(v) }} Bq/m³
+
+mushroom:
+  hold_action:
+    action: navigate
+    navigation_path: /lovelace/air
+
+graph:
+  hours_to_show: 48
+  points_per_hour: 2
+```
+
+
+## Threshold bar options
+```yaml
+type: custom:jp2-air-quality
+preset: pm25
+entity: sensor.air_pm2_5
+bar:
+  enabled: true        # show/hide bar
+  height: 8            # track height in px
+  padding: 16          # left/right padding in px
+  bottom: 8            # distance from bottom in px
+  thumb_size: 12       # cursor size
+  thumb_border_width: 2
+  thumb_border_color: "rgba(0,0,0,0.85)"
+  track_good: "rgba(0,200,83,0.30)"
+  track_warn: "rgba(255,193,7,0.30)"
+  track_bad:  "rgba(244,67,54,0.30)"
+  fill_good:  "rgba(0,200,83,0.95)"
+  fill_warn:  "rgba(255,193,7,0.95)"
+  fill_bad:   "rgba(244,67,54,0.95)"
+  fill_none:  "rgba(180,190,200,0.55)"
+graph_colors_from_bar: true
+```
+
+## Troubleshooting
+- "Custom element doesn’t exist": verify resource URL is correct and type is `module`, then CTRL+F5.
+- Bar/cursor not visible: `card-mod` is required.
+
+## License
+MIT
