@@ -3,7 +3,7 @@ const CARD_NAME = "JP2 Air Quality";
 const CARD_DESC =
   "Mushroom + mini-graph stack with threshold bar and full visual editor.";
 
-const CARD_VERSION = "1.6.3";
+const CARD_VERSION = "1.7.0";
 
 const DEFAULT_NAME_BY_PRESET = {
   radon: "Radon",
@@ -87,6 +87,7 @@ class Jp2AirQualityCard extends HTMLElement {
             { name: "name", selector: { text: {} } },
             { name: "icon", selector: { icon: {} }, context: { icon_entity: "entity" } },
             { name: "show_graph", selector: { boolean: {} } },
+            { name: "bar_enabled", selector: { boolean: {} } },
           ],
         },
         {
