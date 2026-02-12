@@ -1,16 +1,12 @@
 # JP2 Air Quality Card (Home Assistant)
 [![HACS Custom][hacs_shield]][hacs]
-[![GitHub Latest Release][releases_shield]][latest_release]
+[![Latest Stable Version](https://img.shields.io/packagist/v/jp2creation/jp2-air-quality?label=version)](https://packagist.org/packages/jp2creation/jp2-air-quality)
 [![GitHub All Releases][downloads_total_shield]][releases]
 [![Buy me a coffee][buy_me_a_coffee_shield]][buy_me_a_coffee]
 
 
 [hacs_shield]: https://img.shields.io/static/v1.svg?label=HACS&message=Custom&style=popout&color=orange&labelColor=41bdf5&logo=HomeAssistantCommunityStore&logoColor=white
 [hacs]: https://hacs.xyz/docs/faq/custom_repositories
-
-[latest_release]: https://github.com/jp2creation/jp2-air-quality/releases/latest
-[releases_shield]:https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjp2creation%2Fjp2-air-quality%2Fmaster%2Fcustom_components%2Fsamsung_soundbar%2Fmanifest.json&query=%24.version&label=release
-
 
 
 [releases]: https://github.com/jp2creation/jp2-air-quality/releases/latest
