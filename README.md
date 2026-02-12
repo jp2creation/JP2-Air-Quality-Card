@@ -10,7 +10,7 @@
 
 <br/>
 
-<img src="docs/images/preview.jpg" alt="JP2 Air Quality Card preview" width="900">
+<img src="docs/images/preview.jpg" alt="JP2 Air Quality Card preview" width="400">
 
 </div>
 
