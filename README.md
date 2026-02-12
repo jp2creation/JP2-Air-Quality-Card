@@ -1,16 +1,12 @@
 <div align="center">
+<img src="docs/images/jp2-air-quality.png" alt="JP2 Air Quality Card preview" width="100%"><br>
 
-# JP2 Air Quality Card  
-### Lovelace “dashboard card” for Air Quality & Comfort (CO₂ / VOC / Radon / Temp / …)
 
 [![HACS Custom][hacs_shield]][hacs]
 ![Latest Stable Version](https://img.shields.io/packagist/v/jp2creation/jp2-air-quality?label=version)
 [![GitHub All Releases][downloads_total_shield]][releases]
 [![Buy me a coffee][buy_me_a_coffee_shield]][buy_me_a_coffee]
 
-<br/>
-
-<img src="docs/images/preview.jpg" alt="JP2 Air Quality Card preview" width="400">
 
 </div>
 
