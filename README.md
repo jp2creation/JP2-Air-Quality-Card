@@ -13,7 +13,7 @@
 
 
 
-[releases]: https://github.com/jp2creation/p2-air-quality/releases/latest
+[releases]: https://github.com/jp2creation/jp2-air-quality/releases/latest
 [downloads_total_shield]: https://img.shields.io/github/downloads/jp2creation/jp2-air-quality/total
 
 
