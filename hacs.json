@@ -1,9 +1,6 @@
 {
-  "name": "JP2 Air Quality",
-  "content_in_root": false,
+  "name": "JP2 Air Quality Card",
   "render_readme": true,
-  "domains": [
-    "lovelace"
-  ],
-  "homeassistant": "2023.8.0"
+  "content_in_root": false,
+  "filename": "jp2-air-quality.js"
 }
