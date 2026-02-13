@@ -1,61 +1,57 @@
 <div align="center">
-<img src="docs/images/preview.png" alt="JP2 Air Quality Card preview" width="100%"><br>
 
+<img src="docs/images/preview.png" alt="JP2 Air Quality Card preview" width="100%">
+
+<br>
 
 [![HACS Custom][hacs_shield]][hacs]
-![Latest Stable Version](https://img.shields.io/packagist/v/jp2creation/jp2-air-quality?label=version)
-[![GitHub All Releases][downloads_total_shield]][releases]
+[![Latest Version][version_shield]][releases]
+[![Downloads][downloads_total_shield]][releases]
 [![Buy me a coffee][buy_me_a_coffee_shield]][buy_me_a_coffee]
-
 
 </div>
 
----
+<br>
 
-## 🚀 What is it?
+# JP2 Air Quality Card
 
-**JP2 Air Quality Card** is a Lovelace card with a clean **dashboard look** designed to display **air quality** and **comfort** at a glance:  
-CO₂, VOC/COV, radon, pressure, temperature, humidity…  
-It includes a **colored gauge**, a **status label**, an optional **AQI summary** and an integrated **history graph**.
+A **Home Assistant Lovelace** card with a clean **dashboard look** to display **air quality & comfort** at a glance  
+(CO₂, VOC, radon, pressure, temperature, humidity…) with a **colored gauge**, a **status label**, an optional **AQI summary**, and an integrated **history graph**.
 
-> ✅ **V2.0.0**: full visual editor redesign (smoother UI), improved stability, cleaner internal structure — especially when enabling **AQI** and/or **Graph**.
+> [!NOTE]  
+> If an option is not available in your version, it is simply ignored.
 
----
-
-## ✨ Highlights
-
-- Dashboard design (great on dark themes / Mushroom-like styles)
-- Multi-sensors display (CO₂, VOC, radon, pressure, temperature, humidity…)
-- Color gauge (green/yellow/red) + cursor indicator
-- Status text (*Good*, *Ventilate*, *Comfort*, *Variable*…)
-- **AQI mode**: global Air Quality summary + per-entity rows
-- Option to **hide sensor list** in AQI mode
-- Built-in history graph (no need for `mini-graph-card`)
-- UI options:
-  - icon resize
-  - hide icon background
-  - hide icon ring/circle
-- When **AQI + Graph** are enabled: optional automatic removal of the divider bar for a cleaner layout
+<br>
 
 ---
 
-## 🧩 Quick links
+<br>
 
-- 📦 Latest release: [Releases][releases]
-- 🛠️ HACS custom repositories doc: [HACS Custom Repo][hacs]
-- ☕ Support: [Buy me a coffee][buy_me_a_coffee]
+## Table of contents
+
+- **[Installation](#installation)**
+- **[Quick start](#quick-start)**
+- **[Examples](#examples)**
+- **[Options](#options)**
+  - **[General](#general)**
+  - **[Graph](#graph)**
+  - **[Icon](#icon)**
+  - **[AQI (Air Quality Index)](#aqi-air-quality-index)**
+- **[Visual editor](#visual-editor)**
+- **[Troubleshooting](#troubleshooting)**
+- **[Development](#development)**
+- **[Contributing](#contributing)**
+- **[Changelog](#changelog)**
+- **[License](#license)**
+- **[Support](#support)**
+
+<br>
 
 ---
 
-## ✅ Requirements
+<br>
 
-- Home Assistant with Lovelace dashboards
-- Access to `/config/www/` for manual install (optional)
-- Sensors with **numeric states** (required for graph)
-
----
-
-## 📦 Installation
+## Installation
 
 ### Option A — HACS (Custom repository)
 
@@ -65,28 +61,36 @@ It includes a **colored gauge**, a **status label**, an optional **AQI summary**
    - Repository: `jp2creation/jp2-air-quality`
    - Category: `Lovelace`
 4. Install the card
-5. Refresh browser cache
+5. Refresh your browser cache
 
 If the resource isn’t added automatically:
-- Settings → Dashboards → Resources → Add
-- URL: `/hacsfiles/jp2-air-quality/jp2-air-quality.js`
+
+- Settings → Dashboards → Resources → Add  
+- URL: `/hacsfiles/jp2-air-quality/jp2-air-quality.js`  
 - Type: `Module`
+
+<br>
 
 ### Option B — Manual
 
 1. Copy **`jp2-air-quality.js`** to:
-   - `/config/www/`  (Lovelace path is `/local/`)
+   - `/config/www/` (Lovelace path is `/local/`)
 2. Add Lovelace resource:
-   - Settings → Dashboards → Resources → Add
-   - URL: `/local/jp2-air-quality.js`
+   - Settings → Dashboards → Resources → Add  
+   - URL: `/local/jp2-air-quality.js`  
    - Type: `Module`
 3. Hard refresh the browser
 
-> ⚠️ Important: the main file must stay named exactly **`jp2-air-quality.js`**.
+> [!IMPORTANT]  
+> The main file must stay named exactly **`jp2-air-quality.js`**.
+
+<br>
 
 ---
 
-## ⚡ Quick start
+<br>
+
+## Quick start
 
 ```yaml
 type: custom:jp2-air-quality
@@ -100,112 +104,298 @@ entities:
   humidity: sensor.humidity_salon
 ```
 
+<br>
+
 ---
 
-## ⚙️ Configuration
+<br>
 
-### Advanced example (AQI + Graph + UI options)
+## Examples
+
+<details>
+<summary><b>Minimal card (only CO₂)</b></summary>
+
+<br>
 
 ```yaml
 type: custom:jp2-air-quality
-title: Salon
+title: Living room
+entities:
+  co2: sensor.living_room_co2
+```
 
-# Graph
+</details>
+
+<br>
+
+<details>
+<summary><b>Graph enabled (24h)</b></summary>
+
+<br>
+
+```yaml
+type: custom:jp2-air-quality
+title: Living room
 show_graph: true
 graph_hours: 24
+entities:
+  co2: sensor.living_room_co2
+  temperature: sensor.living_room_temperature
+  humidity: sensor.living_room_humidity
+```
 
-# Icon style
+</details>
+
+<br>
+
+<details>
+<summary><b>AQI summary (with thresholds)</b></summary>
+
+<br>
+
+```yaml
+type: custom:jp2-air-quality
+title: Living room
+
+aqi:
+  enabled: true
+  hide_sensors: false
+  sensors:
+    - entity: sensor.living_room_co2
+      label: CO2
+      unit: ppm
+      good: 800
+      medium: 1200
+    - entity: sensor.living_room_voc
+      label: VOC
+      unit: ppb
+      good: 150
+      medium: 300
+
+entities:
+  co2: sensor.living_room_co2
+  voc: sensor.living_room_voc
+  temperature: sensor.living_room_temperature
+  humidity: sensor.living_room_humidity
+```
+
+</details>
+
+<br>
+
+<details>
+<summary><b>AQI mode — hide the sensor list</b></summary>
+
+<br>
+
+```yaml
+type: custom:jp2-air-quality
+title: Living room
+
+aqi:
+  enabled: true
+  hide_sensors: true
+  sensors:
+    - entity: sensor.living_room_co2
+      label: CO2
+      unit: ppm
+      good: 800
+      medium: 1200
+    - entity: sensor.living_room_voc
+      label: VOC
+      unit: ppb
+      good: 150
+      medium: 300
+
+entities:
+  co2: sensor.living_room_co2
+  voc: sensor.living_room_voc
+```
+
+</details>
+
+<br>
+
+<details>
+<summary><b>AQI mode — horizontal layout + icons only</b></summary>
+
+<br>
+
+> [!TIP]  
+> This mode is perfect for a compact “summary row”.
+
+```yaml
+type: custom:jp2-air-quality
+title: Living room
+
+aqi:
+  enabled: true
+  layout: horizontal
+  icons_only: true
+  sensors:
+    - entity: sensor.living_room_co2
+      label: CO2
+      unit: ppm
+      good: 800
+      medium: 1200
+    - entity: sensor.living_room_voc
+      label: VOC
+      unit: ppb
+      good: 150
+      medium: 300
+    - entity: sensor.living_room_radon
+      label: Radon
+      unit: Bq/m³
+      good: 100
+      medium: 300
+
+entities:
+  co2: sensor.living_room_co2
+  voc: sensor.living_room_voc
+  radon: sensor.living_room_radon
+```
+
+</details>
+
+<br>
+
+<details>
+<summary><b>AQI title — add an image and/or an icon on the left</b></summary>
+
+<br>
+
+```yaml
+type: custom:jp2-air-quality
+title: Living room
+
+aqi:
+  enabled: true
+
+  # Left of “AQI”
+  title_icon: mdi:air-filter
+  title_image: /local/icons/air-quality.png
+
+  sensors:
+    - entity: sensor.living_room_co2
+      label: CO2
+      unit: ppm
+      good: 800
+      medium: 1200
+
+entities:
+  co2: sensor.living_room_co2
+```
+
+</details>
+
+<br>
+
+<details>
+<summary><b>Icon styling (no background + no ring)</b></summary>
+
+<br>
+
+```yaml
+type: custom:jp2-air-quality
+title: Living room
+
 icon:
   size: 44
   show_background: false
   show_circle: false
 
-# AQI (Air Quality Index summary)
-aqi:
-  enabled: true
-  hide_sensors: true
-  sensors:
-    - entity: sensor.co2_ppm
-      label: CO2
-      unit: ppm
-      good: 800
-      medium: 1200
-    - entity: sensor.voc_ppb
-      label: VOC
-      unit: ppb
-      good: 150
-      medium: 300
+entities:
+  co2: sensor.living_room_co2
+  temperature: sensor.living_room_temperature
+  humidity: sensor.living_room_humidity
 ```
 
-> ℹ️ Note: if you previously used the `iqa:` key, update it to `aqi:`.
+</details>
+
+<br>
 
 ---
 
-## 📚 Options reference
+<br>
 
-If an option is not available in your version, it is simply ignored.
+## Options
 
 ### General
 
-| Option      | Type   | Default | Description |
-|------------|--------|---------|-------------|
-| `title`    | string | —       | Card title |
-| `entities` | object | —       | Sensors mapping (`co2`, `voc`, `radon`, `pressure`, `temperature`, `humidity`…) |
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `title` | string | — | Card title |
+| `entities` | object | — | Sensors mapping: `co2`, `voc`, `radon`, `pressure`, `temperature`, `humidity`… |
+
+<br>
 
 ### Graph
 
-| Option         | Type    | Default | Description |
-|---------------|---------|---------|-------------|
-| `show_graph`  | boolean | false   | Enables built-in history graph |
-| `graph_hours` | number  | 24      | History window (hours) |
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `show_graph` | boolean | `false` | Enable built-in history graph |
+| `graph_hours` | number | `24` | History window in hours |
+
+<br>
 
 ### Icon
 
-| Option                 | Type    | Default | Description |
-|------------------------|---------|---------|-------------|
-| `icon.size`            | number  | 44      | Icon size (px) |
-| `icon.show_background` | boolean | true    | Show/hide icon background |
-| `icon.show_circle`     | boolean | true    | Show/hide icon ring |
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `icon.size` | number | `44` | Icon size (px) |
+| `icon.show_background` | boolean | `true` | Show/hide icon background |
+| `icon.show_circle` | boolean | `true` | Show/hide icon ring |
 
-### AQI
+<br>
 
-| Option              | Type    | Default | Description |
-|--------------------|---------|---------|-------------|
-| `aqi.enabled`      | boolean | false   | Enables AQI summary mode |
-| `aqi.hide_sensors` | boolean | false   | Hides the sensor list in AQI mode |
-| `aqi.sensors`      | array   | `[]`    | AQI sensors list with thresholds |
+### AQI (Air Quality Index)
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `aqi.enabled` | boolean | `false` | Enable AQI summary mode |
+| `aqi.hide_sensors` | boolean | `false` | Hide the sensor list in AQI mode |
+| `aqi.layout` | string | `vertical` | AQI layout (`vertical` / `horizontal`) |
+| `aqi.icons_only` | boolean | `false` | In horizontal layout: only show icons (hide the rest) |
+| `aqi.title_icon` | string | — | Optional left icon (e.g. `mdi:air-filter`) |
+| `aqi.title_image` | string | — | Optional left image (e.g. `/local/...png`) |
+| `aqi.sensors` | array | `[]` | AQI sensors list with thresholds |
 
 #### `aqi.sensors[]` item
 
-| Field    | Type   | Required | Description |
-|----------|--------|----------|-------------|
-| `entity` | string | ✅       | HA entity (ex: `sensor.co2_ppm`) |
-| `label`  | string | ✅       | Display name |
-| `unit`   | string | ❌       | Display unit (ppm/ppb/…) |
-| `good`   | number | ✅       | “Good” threshold |
-| `medium` | number | ✅       | “Medium” threshold (above = “Bad”) |
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `entity` | string | ✅ | HA entity (ex: `sensor.co2_ppm`) |
+| `label` | string | ✅ | Display name |
+| `unit` | string | ❌ | Display unit (ppm/ppb/…) |
+| `good` | number | ✅ | “Good” threshold |
+| `medium` | number | ✅ | “Medium” threshold (above = “Bad”) |
+
+> [!IMPORTANT]  
+> If you previously used the `iqa:` key, update it to `aqi:`.
+
+<br>
 
 ---
 
-## 🧠 Visual editor (V2.0.0)
-<img src="docs/images/visual-editor.png" alt="JP2 Air Quality Card preview" width="100%"><br>
+<br>
+
+## Visual editor
+
+<img src="docs/images/visual-editor.png" alt="JP2 Air Quality visual editor" width="100%"><br>
+
 V2.0.0 includes a full redesign of the visual editor:
 - smoother UI / fewer freezes
 - clearer settings sections
-- more stable behavior when enabling AQI and/or Graph
-- cleaner internal code structure for easier maintenance
+- more stable behavior when enabling **AQI** and/or **Graph**
+- cleaner internal structure for easier maintenance
+
+<br>
 
 ---
 
-## ✅ Best practices
+<br>
 
-- CO₂ high → ventilate/open windows
-- VOC → check sources (paints, solvents, sprays), ventilate
-- Radon → evaluate over time (average), take action if persistent
-
----
-
-## 🧯 Troubleshooting
+## Troubleshooting
 
 ### Card not showing / “Custom element doesn’t exist”
 - Check the resource path (`/local/...` or `/hacsfiles/...`)
@@ -214,56 +404,41 @@ V2.0.0 includes a full redesign of the visual editor:
 
 ### Old version still loaded
 - Clear browser cache  
-- Or use a cache buster:  
-  `/local/jp2-air-quality.js?v=2`
+- Or use a cache buster: `/local/jp2-air-quality.js?v=2`
 
 ### Graph is empty
-- The entity must have history (Recorder enabled)
+- Recorder/history must be enabled
 - The entity state must be numeric
 
 ### Freeze when enabling AQI
-- Update to **2.0.0+** (visual editor + stability improvements)
+- Update to the latest version (includes stability improvements and visual editor updates)
+
+<br>
 
 ---
 
-## ❓ FAQ
+<br>
 
-<details>
-  <summary><b>Can I use the card with only CO₂ and temperature?</b></summary>
-
-Yes. You can provide only the sensors you have; the card adapts.
-</details>
-
-<details>
-  <summary><b>Can I create one card per room?</b></summary>
-
-Yes. Duplicate the YAML and change the title + entities.
-</details>
-
-<details>
-  <summary><b>Does the built-in graph replace mini-graph-card?</b></summary>
-
-Yes. This card includes its own graph based on Home Assistant history.
-</details>
-
----
-
-## 🛠️ Development
+## Development
 
 Copy `jp2-air-quality.js` into `/config/www/`  
 Add resource: `/local/jp2-air-quality.js?v=dev`  
-Hard refresh browser after each change
+Hard refresh browser after each change.
 
-Tip: keeping `?v=dev` helps bypass cache when iterating quickly.
+Tip: keeping `?v=dev` helps bypass cache while iterating.
+
+<br>
 
 ---
 
-## 🤝 Contributing
+<br>
+
+## Contributing
 
 Please open an Issue with:
 - Home Assistant version
 - YAML config (remove sensitive info)
-- Console logs (F12) if any
+- Console logs (F12)
 
 PR workflow:
 1. Fork
@@ -271,30 +446,46 @@ PR workflow:
 3. Clean commits
 4. Pull Request
 
----
-
-## 🧾 Changelog
-
-See the GitHub releases page: [Releases][releases]
+<br>
 
 ---
 
-## 📄 License
+<br>
+
+## Changelog
+
+See GitHub releases: **[Releases][releases]**
+
+<br>
+
+---
+
+<br>
+
+## License
 
 MIT — see `LICENSE`.
 
----
-
-## ☕ Support
-
-If this project helps you, you can support it here: [Buy me a coffee][buy_me_a_coffee]
+<br>
 
 ---
 
-<!-- Reference links (edit if needed) -->
+<br>
+
+## Support
+
+If this project helps you, you can support it here: **[Buy me a coffee][buy_me_a_coffee]**
+
+<br>
+
+---
+
+<!-- Reference links -->
 [hacs_shield]: https://img.shields.io/badge/HACS-Custom-orange.svg
 [hacs]: https://hacs.xyz/docs/faq/custom_repositories/
+[version_shield]: https://img.shields.io/github/v/release/jp2creation/jp2-air-quality?label=version
 [downloads_total_shield]: https://img.shields.io/github/downloads/jp2creation/jp2-air-quality/total
 [releases]: https://github.com/jp2creation/jp2-air-quality/releases
 [buy_me_a_coffee_shield]: https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow.svg
 [buy_me_a_coffee]: https://www.buymeacoffee.com/jp2creation
+
