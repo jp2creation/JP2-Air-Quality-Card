@@ -4,8 +4,8 @@
 
 <br>
 
-[![HACS Custom][hacs_shield]][hacs]
 [![Latest Version][version_shield]][releases]
+[![HACS Custom][hacs_shield]][hacs]
 [![Downloads][downloads_total_shield]][releases]
 [![Buy me a coffee][buy_me_a_coffee_shield]][buy_me_a_coffee]
 
@@ -483,7 +483,7 @@ If this project helps you, you can support it here: **[Buy me a coffee][buy_me_a
 <!-- Reference links -->
 [hacs_shield]: https://img.shields.io/badge/HACS-Custom-orange.svg
 [hacs]: https://hacs.xyz/docs/faq/custom_repositories/
-[version_shield]: https://img.shields.io/github/v/release/jp2creation/jp2-air-quality?label=version
+[version_shield]: https://img.shields.io/badge/Lovelace-Home_Assistant-blue
 [downloads_total_shield]: https://img.shields.io/github/downloads/jp2creation/jp2-air-quality/total
 [releases]: https://github.com/jp2creation/jp2-air-quality/releases
 [buy_me_a_coffee_shield]: https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow.svg
