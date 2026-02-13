@@ -107,7 +107,7 @@ entities:
 <br>
 
 ---
-
+<img src="docs/images/dash1.png" alt="JP2 Air Quality Card preview" width="100%">
 <br>
 
 ## Examples
