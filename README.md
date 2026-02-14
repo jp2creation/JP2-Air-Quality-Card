@@ -372,7 +372,9 @@ entities:
 
 ## Visual editor
 
-<img src="docs/images/visual-editor.png" alt="JP2 Air Quality visual editor" width="100%"><br>
+<img src="docs/images/visual-editor.png" alt="JP2 Air Quality visual editor" width="60%"><img src="docs/images/editor-aqi.png" alt="JP2 Air Quality visual editor" width="40%">
+
+<br>
 
 V2.0.0 includes a full redesign of the visual editor:
 - smoother UI / fewer freezes
