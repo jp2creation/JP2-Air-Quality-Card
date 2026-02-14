@@ -98,6 +98,7 @@ entities:
 
 ---
 <img src="docs/images/dash1.png" alt="JP2 Air Quality Card preview" width="100%">
+<img src="docs/images/sensors-aqi.png" alt="JP2 Air Quality Card preview" width="40%">
 <br>
 
 ## Examples
