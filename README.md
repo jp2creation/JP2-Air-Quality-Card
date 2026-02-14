@@ -26,7 +26,7 @@ A **Home Assistant Lovelace** card with a clean **dashboard look** to display **
 ---
 
 <br>
-
+<img src="docs/images/dash1.png" alt="JP2 Air Quality Card preview" width="100%">
 
  ## Table of contents
 -- **[Installation](#installation)**
