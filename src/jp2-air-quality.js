@@ -2,7 +2,7 @@
   JP2 Air Quality Card
   File name must remain: jp2-air-quality.js
 
-  Release notes — v2.0.4.2
+  Release notes — v2.0.4.3
   - Fix: barre colorée — segments calculés sur les seuils du preset (inclut presets en plage).
   - Fix: presets — vrais profils en plage pour température/humidité/pression + seuils CO₂/Radon/VOC/PM ajustés.
   - Fix: repère — mode "Couleur statut" robuste (valeurs legacy + bar.knob_color_mode).
@@ -23,12 +23,13 @@
   - Feat: barre colorée — couleur du repère (thème ou statut).
   - Feat: barre colorée — taille du contour du repère (épaisseur).
   - Feat: AQI — option “Air uniquement” (statut global ignore temp/humidité/pression).
-  - Fix: AQI — détection preset améliorée (température/humidité/pression).*/
+  - Fix: AQI — détection preset améliorée (température/humidité/pression).
+  - Feat: AQI — image au-dessus du statut global (images différentes selon Bon/Moyen/Mauvais).*/
 
 const CARD_TYPE = "jp2-air-quality";
 const CARD_NAME = "JP2 Air Quality";
 const CARD_DESC = "Air quality card (sensor + AQI multi-sensors) with internal history graph and a fluid visual editor (v2).";
-const CARD_VERSION = "2.0.4.2";
+const CARD_VERSION = "2.0.4.3";
 
 
 const CARD_BUILD_DATE = "2026-02-14";
@@ -426,6 +427,15 @@ class Jp2AirQualityCard extends HTMLElement {
       // AQI global
       aqi_air_only: false, // si true : le statut global ignore temp/humidité/pression etc.
 
+// AQI global image (optionnel) — affichée au-dessus du statut global
+aqi_global_image_enabled: false,
+aqi_global_image_size: 52, // hauteur (px)
+aqi_global_image_radius: 14, // arrondi (px)
+aqi_global_image_good: "",
+aqi_global_image_warn: "",
+aqi_global_image_bad: "",
+aqi_global_image_unknown: "",
+
       aqi_background_enabled: false,
       aqi_layout: "vertical", // vertical | horizontal
       // Horizontal tiles options
@@ -695,6 +705,37 @@ class Jp2AirQualityCard extends HTMLElement {
           },
         ],
       },
+{
+  type: "expandable",
+  name: "aqi_global_image",
+  title: "AQI — Image du statut global",
+  flatten: true,
+  schema: [
+    {
+      type: "grid",
+      name: "",
+      flatten: true,
+      column_min_width: "240px",
+      schema: [
+        { name: "aqi_global_image_enabled", selector: { boolean: {} } },
+        { name: "aqi_global_image_size", selector: { number: { min: 16, max: 220, mode: "box", step: 1 } } },
+        { name: "aqi_global_image_radius", selector: { number: { min: 0, max: 40, mode: "box", step: 1 } } },
+      ],
+    },
+    {
+      type: "grid",
+      name: "",
+      flatten: true,
+      column_min_width: "240px",
+      schema: [
+        { name: "aqi_global_image_good", selector: { text: {} } },
+        { name: "aqi_global_image_warn", selector: { text: {} } },
+        { name: "aqi_global_image_bad", selector: { text: {} } },
+        { name: "aqi_global_image_unknown", selector: { text: {} } },
+      ],
+    },
+  ],
+},
       {
         type: "expandable",
         name: "colors",
@@ -773,6 +814,13 @@ class Jp2AirQualityCard extends HTMLElement {
       aqi_show_title: "Afficher le titre",
       aqi_show_global: "Afficher le statut global",
       aqi_air_only: "Air uniquement",
+aqi_global_image_enabled: "Image au-dessus du statut global",
+aqi_global_image_size: "Hauteur image (px)",
+aqi_global_image_radius: "Arrondi image (px)",
+aqi_global_image_good: "Image (Bon)",
+aqi_global_image_warn: "Image (Moyen)",
+aqi_global_image_bad: "Image (Mauvais)",
+aqi_global_image_unknown: "Image (Inconnu)",
       aqi_show_sensors: "Afficher la liste des capteurs",
       aqi_background_enabled: "Fond coloré (AQI)",
     };
@@ -781,6 +829,13 @@ class Jp2AirQualityCard extends HTMLElement {
       aqi_entities: "Ajoute plusieurs capteurs (CO₂, VOC/TVOC, PM2.5, Radon...). Un statut Bon/Moyen/Mauvais est calculé pour chacun.",
       aqi_title_icon: "Optionnel : une icône affichée à gauche du titre en mode AQI.",
       aqi_air_only: "Si activé, le statut global ignore température/humidité/pression et ne considère que CO₂/VOC/PM/Radon.",
+aqi_global_image_enabled: "Affiche une image au-dessus du statut global (image choisie selon Bon/Moyen/Mauvais).",
+aqi_global_image_size: "Hauteur de l’image en px (ex: 52).",
+aqi_global_image_radius: "Arrondi des coins de l’image en px.",
+aqi_global_image_good: "Chemin/URL de l’image quand le statut global est Bon (good).",
+aqi_global_image_warn: "Chemin/URL de l’image quand le statut global est Moyen (warn).",
+aqi_global_image_bad: "Chemin/URL de l’image quand le statut global est Mauvais (bad).",
+aqi_global_image_unknown: "Chemin/URL de l’image si statut global inconnu.",
       graph_color: "Ex: var(--primary-color) ou #00bcd4. Vide = couleur du thème.",
       graph_warn_color: "Vide = couleur orange de la barre.",
       graph_bad_color: "Vide = couleur rouge de la barre.",
@@ -819,6 +874,14 @@ class Jp2AirQualityCard extends HTMLElement {
 
     merged.aqi_title_icon = String(merged.aqi_title_icon || "");
     merged.aqi_air_only = !!merged.aqi_air_only;
+merged.aqi_global_image_enabled = !!merged.aqi_global_image_enabled;
+merged.aqi_global_image_size = clamp(Number(merged.aqi_global_image_size ?? 52), 16, 220);
+merged.aqi_global_image_radius = clamp(Number(merged.aqi_global_image_radius ?? 14), 0, 40);
+merged.aqi_global_image_good = String(merged.aqi_global_image_good || "");
+merged.aqi_global_image_warn = String(merged.aqi_global_image_warn || "");
+merged.aqi_global_image_bad = String(merged.aqi_global_image_bad || "");
+merged.aqi_global_image_unknown = String(merged.aqi_global_image_unknown || "");
+
     merged.aqi_tile_transparent = !!merged.aqi_tile_transparent;
     merged.aqi_entities = Array.isArray(merged.aqi_entities) ? merged.aqi_entities : [];
     merged.aqi_overrides = merged.aqi_overrides && typeof merged.aqi_overrides === "object" ? merged.aqi_overrides : {};
@@ -912,6 +975,9 @@ class Jp2AirQualityCard extends HTMLElement {
       String(!!c?.aqi_show_sensors),
       String(!!c?.aqi_show_global),
       String(!!c?.aqi_air_only),
+String(!!c?.aqi_global_image_enabled),
+String(c?.aqi_global_image_size || ""),
+String(c?.aqi_global_image_radius || ""),
       String(!!c?.aqi_show_title),
       String(c?.aqi_title_icon || ""),
       String(!!c?.aqi_show_sensor_icon),
@@ -1290,6 +1356,8 @@ class Jp2AirQualityCard extends HTMLElement {
         .aqi-title { font-weight: 800; display:flex; align-items:center; gap: 8px; }
         .aqi-title ha-icon { --mdc-icon-size: 18px; opacity: .9; }
         .aqi-global { font-weight: 700; opacity:.85; display:flex; gap:8px; align-items:center; }
+.aqi-global-wrap { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.aqi-global-image { display:block; height: var(--jp2-aqi-global-image-size, 52px); max-width: 220px; object-fit: contain; border-radius: var(--jp2-aqi-global-image-radius, 14px); }
         .dot { width:10px; height:10px; border-radius:999px; background: var(--jp2-status-color); box-shadow: 0 0 0 1px rgba(255,255,255,.9), 0 0 0 2px rgba(0,0,0,.20); }
 
         .aqi-list { display:flex; flex-direction:column; gap: 8px; margin-top: 8px; }
@@ -1402,6 +1470,8 @@ class Jp2AirQualityCard extends HTMLElement {
 
         card.style.setProperty("--jp2-aqi-cols", String(clamp(Number(c.aqi_tiles_per_row || 3), 1, 6)));
         card.style.setProperty("--jp2-aqi-tile-radius", `${clamp(Number(c.aqi_tile_radius ?? 16), 0, 40)}px`);
+card.style.setProperty("--jp2-aqi-global-image-size", `${clamp(Number(c.aqi_global_image_size ?? 52), 16, 220)}px`);
+card.style.setProperty("--jp2-aqi-global-image-radius", `${clamp(Number(c.aqi_global_image_radius ?? 14), 0, 40)}px`);
       }
 
       if (String(c.card_mode) === "aqi") {
@@ -1681,6 +1751,20 @@ class Jp2AirQualityCard extends HTMLElement {
     this._historyInflight.set(key, p);
     return await p;
   }
+_aqiGlobalImageForLevel(level) {
+  const c = this._config || {};
+  const pick = (k) => {
+    const v = c && Object.prototype.hasOwnProperty.call(c, k) ? c[k] : "";
+    return (v === null || v === undefined) ? "" : String(v).trim();
+  };
+  const map = {
+    good: pick("aqi_global_image_good"),
+    warn: pick("aqi_global_image_warn"),
+    bad: pick("aqi_global_image_bad"),
+    unknown: pick("aqi_global_image_unknown"),
+  };
+  return map[String(level || "unknown")] || map.unknown || "";
+}
 
   _renderAQICard() {
     const c = this._config;
@@ -1757,13 +1841,20 @@ class Jp2AirQualityCard extends HTMLElement {
       kids.push(el("span", {}, [c.aqi_title || "AQI"]));
       return el("div", { class: "aqi-title" }, kids);
     })();
-    const head = el("div", { class: "aqi-head" }, [
-      titleEl,
-      c.aqi_show_global === false ? null : el("div", { class: "aqi-global" }, [
-        el("span", { class: "dot", style: { background: globalColor } }),
-        el("span", {}, [globalLabel]),
-      ]),
-    ]);
+        const globalRow = (c.aqi_show_global === false) ? null : el("div", { class: "aqi-global" }, [
+          el("span", { class: "dot", style: { background: globalColor } }),
+          el("span", {}, [globalLabel]),
+        ]);
+    
+        const imgSrc = (c.aqi_show_global === false || !c.aqi_global_image_enabled) ? "" : this._aqiGlobalImageForLevel(globalLevel);
+        const imgEl = imgSrc ? el("img", { class: "aqi-global-image", src: imgSrc, alt: globalLabel, loading: "lazy", decoding: "async" }) : null;
+    
+        const globalWrap = (globalRow || imgEl) ? el("div", { class: "aqi-global-wrap" }, [imgEl, globalRow]) : null;
+    
+        const head = el("div", { class: "aqi-head" }, [
+          titleEl,
+          globalWrap,
+        ]);
 
     const layout = String(c.aqi_layout || "vertical");
     const iconsOnly = (layout === "horizontal") && !!c.aqi_tiles_icons_only;
@@ -1922,6 +2013,14 @@ class Jp2AirQualityCardEditor extends HTMLElement {
     merged.knob_color_mode = normalizeKnobColorMode(merged);
     if (merged.bar && Object.prototype.hasOwnProperty.call(merged.bar, "knob_color_mode")) delete merged.bar.knob_color_mode;
       merged.aqi_air_only = !!merged.aqi_air_only;
+      merged.aqi_global_image_enabled = !!merged.aqi_global_image_enabled;
+      merged.aqi_global_image_size = clamp(Number(merged.aqi_global_image_size ?? 52), 16, 220);
+      merged.aqi_global_image_radius = clamp(Number(merged.aqi_global_image_radius ?? 14), 0, 40);
+      merged.aqi_global_image_good = String(merged.aqi_global_image_good || "");
+      merged.aqi_global_image_warn = String(merged.aqi_global_image_warn || "");
+      merged.aqi_global_image_bad = String(merged.aqi_global_image_bad || "");
+      merged.aqi_global_image_unknown = String(merged.aqi_global_image_unknown || "");
+
 
       // Fix: clean any legacy dotted keys like "bar.width" from YAML
       jp2NormalizeDottedRootKeys(merged, ["bar"]);
@@ -2418,6 +2517,13 @@ class Jp2AirQualityCardEditor extends HTMLElement {
       aqi_air_only: "Air uniquement",
       aqi_show_sensors: "Afficher les capteurs",
       aqi_background_enabled: "Fond coloré",
+aqi_global_image_enabled: "Image au-dessus du statut global",
+aqi_global_image_size: "Hauteur image (px)",
+aqi_global_image_radius: "Arrondi image (px)",
+aqi_global_image_good: "Image (Bon)",
+aqi_global_image_warn: "Image (Moyen)",
+aqi_global_image_bad: "Image (Mauvais)",
+aqi_global_image_unknown: "Image (Inconnu)",
       // AQI entities / layout
       aqi_entities: "Entités (capteurs)",
       aqi_layout: "Disposition",
@@ -2468,6 +2574,13 @@ class Jp2AirQualityCardEditor extends HTMLElement {
       aqi_entities: "Tu peux sélectionner plusieurs entités.",
       aqi_title_icon: "Optionnel : icône affichée à gauche du titre en mode AQI.",
       aqi_air_only: "Si activé, le statut global ignore température / humidité / pression. Seuls CO₂, VOC/TVOC, PM1/PM2.5 et Radon comptent.",
+aqi_global_image_enabled: "Affiche une image au-dessus du statut global (image choisie selon Bon/Moyen/Mauvais).",
+aqi_global_image_size: "Hauteur de l’image en px (ex: 52).",
+aqi_global_image_radius: "Arrondi des coins de l’image en px.",
+aqi_global_image_good: "Chemin/URL de l’image quand le statut global est Bon (good). Ex: /local/aqi/good.png",
+aqi_global_image_warn: "Chemin/URL de l’image quand le statut global est Moyen (warn).",
+aqi_global_image_bad: "Chemin/URL de l’image quand le statut global est Mauvais (bad).",
+aqi_global_image_unknown: "Chemin/URL de l’image si statut global inconnu.",
       aqi_tile_transparent: "Si activé, supprime le fond gris des tuiles (bordure uniquement).",
       aqi_tile_outline_transparent: "Si activé, supprime aussi la bordure des tuiles (aucun contour).",
       aqi_tiles_icons_only: "Uniquement en disposition horizontale : n’affiche que l’icône de chaque capteur.",
@@ -2510,6 +2623,14 @@ class Jp2AirQualityCardEditor extends HTMLElement {
 
     next.aqi_title_icon = String(next.aqi_title_icon || "");
     next.aqi_air_only = !!next.aqi_air_only;
+next.aqi_global_image_enabled = !!next.aqi_global_image_enabled;
+next.aqi_global_image_size = clamp(Number(next.aqi_global_image_size ?? 52), 16, 220);
+next.aqi_global_image_radius = clamp(Number(next.aqi_global_image_radius ?? 14), 0, 40);
+next.aqi_global_image_good = String(next.aqi_global_image_good || "");
+next.aqi_global_image_warn = String(next.aqi_global_image_warn || "");
+next.aqi_global_image_bad = String(next.aqi_global_image_bad || "");
+next.aqi_global_image_unknown = String(next.aqi_global_image_unknown || "");
+
     next.aqi_tile_transparent = !!next.aqi_tile_transparent;
     next.aqi_tile_outline_transparent = !!next.aqi_tile_outline_transparent;
     next.aqi_tiles_icons_only = !!next.aqi_tiles_icons_only;
@@ -2694,20 +2815,53 @@ class Jp2AirQualityCardEditor extends HTMLElement {
   }
 
   _schemaAqiGeneral() {
-    return [
-      { name: "card_mode", selector: { select: { options: [
-        { label: "Capteur Card", value: "sensor" },
-        { label: "AQI Card (multi-capteurs)", value: "aqi" },
-      ], mode: "dropdown" } } },
-      { name: "aqi_title", selector: { text: {} } },
-      { name: "aqi_title_icon", selector: { icon: {} } },
-      { name: "aqi_show_title", selector: { boolean: {} } },
-      { name: "aqi_show_global", selector: { boolean: {} } },
-      { name: "aqi_air_only", selector: { boolean: {} } },
-      { name: "aqi_show_sensors", selector: { boolean: {} } },
-      { name: "aqi_background_enabled", selector: { boolean: {} } },
-    ];
-  }
+  return [
+    { name: "card_mode", selector: { select: { options: [
+      { label: "Capteur Card", value: "sensor" },
+      { label: "AQI Card (multi-capteurs)", value: "aqi" },
+    ], mode: "dropdown" } } },
+    { name: "aqi_title", selector: { text: {} } },
+    { name: "aqi_title_icon", selector: { icon: {} } },
+    { name: "aqi_show_title", selector: { boolean: {} } },
+    { name: "aqi_show_global", selector: { boolean: {} } },
+    { name: "aqi_air_only", selector: { boolean: {} } },
+    { name: "aqi_show_sensors", selector: { boolean: {} } },
+    { name: "aqi_background_enabled", selector: { boolean: {} } },
+
+    {
+      type: "expandable",
+      name: "aqi_global_image",
+      title: "Image du statut global",
+      flatten: true,
+      schema: [
+        {
+          type: "grid",
+          name: "",
+          flatten: true,
+          column_min_width: "220px",
+          schema: [
+            { name: "aqi_global_image_enabled", selector: { boolean: {} } },
+            { name: "aqi_global_image_size", selector: { number: { min: 16, max: 220, mode: "box", step: 1 } } },
+            { name: "aqi_global_image_radius", selector: { number: { min: 0, max: 40, mode: "box", step: 1 } } },
+          ],
+        },
+        {
+          type: "grid",
+          name: "",
+          flatten: true,
+          column_min_width: "220px",
+          schema: [
+            { name: "aqi_global_image_good", selector: { text: {} } },
+            { name: "aqi_global_image_warn", selector: { text: {} } },
+            { name: "aqi_global_image_bad", selector: { text: {} } },
+            { name: "aqi_global_image_unknown", selector: { text: {} } },
+          ],
+        },
+      ],
+    },
+  ];
+}
+
 
   _schemaAqiEntities() {
     return [
