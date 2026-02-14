@@ -2,7 +2,7 @@
   JP2 Air Quality Card
   File name must remain: jp2-air-quality.js
 
-  Release notes — v2.0.4.4
+  Release notes — v2.0.4.5
   - Fix: barre colorée — segments calculés sur les seuils du preset (inclut presets en plage).
   - Fix: presets — vrais profils en plage pour température/humidité/pression + seuils CO₂/Radon/VOC/PM ajustés.
   - Fix: repère — mode "Couleur statut" robuste (valeurs legacy + bar.knob_color_mode).
@@ -27,12 +27,13 @@
   - Feat: AQI — icône SVG au-dessus du statut global (good/warn/bad) avec couleurs (statut/perso) + cercle/fond optionnels.
   - Feat: AQI — options aqi_global_svg_position (global/center) + aqi_global_svg_align (left/center/right).
   - Feat: AQI — personnalisation du statut global (dot/texte) : taille/contour/épaisseur + possibilité de masquer le statut en gardant le SVG.
+  - Feat: AQI — style d’icônes : pictogramme “transparent” (thème) ou “coloré” (statut).
 */
 
 const CARD_TYPE = "jp2-air-quality";
 const CARD_NAME = "JP2 Air Quality";
 const CARD_DESC = "Air quality card (sensor + AQI multi-sensors) with internal history graph and a fluid visual editor (v2).";
-const CARD_VERSION = "2.0.4.4";
+const CARD_VERSION = "2.0.4.5";
 
 
 const CARD_BUILD_DATE = "2026-02-14";
@@ -520,6 +521,7 @@ class Jp2AirQualityCard extends HTMLElement {
       aqi_icon_inner_size: 18,
       aqi_icon_background: true,
       aqi_icon_circle: true,
+      aqi_icon_color_mode: "colored",
 
       // Per-entity overrides: { "sensor.xxx": { name, icon } }
       aqi_overrides: {},
@@ -1750,6 +1752,20 @@ class Jp2AirQualityCard extends HTMLElement {
   }
 
 
+  
+  _jp2NormAqiIconColorMode(raw) {
+    // "colored" (statut) ou "transparent" (thème). Accepte quelques alias.
+    if (raw === false || raw === 0) return "transparent";
+    const v = String(raw ?? "colored").trim().toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[_\-]+/g, " ")
+      .replace(/\s+/g, " ");
+    if (v === "transparent" || v === "transparence" || v === "theme" || v === "themed" || v === "neutral" || v === "neutre") return "transparent";
+    if (v === "colored" || v === "colore" || v === "coloree" || v === "couleur" || v === "statut" || v === "status" || v === "status color" || v === "color") return "colored";
+    return "colored";
+  }
+
+
   _jp2NormAqiColorMode(raw) {
     const v = String(raw ?? "status").trim().toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -1982,6 +1998,7 @@ class Jp2AirQualityCard extends HTMLElement {
     const iconsOnly = (layout === "horizontal") && !!c.aqi_tiles_icons_only;
     const showIconBg = c.aqi_icon_background !== false;
     const showIconCircle = c.aqi_icon_circle !== false;
+    const iconColorMode = this._jp2NormAqiIconColorMode(c.aqi_icon_color_mode);
 
     let body = null;
 
@@ -2002,7 +2019,9 @@ class Jp2AirQualityCard extends HTMLElement {
         const iconWrap = el("div", { class: "icon-wrap", style: { width: `${r.iconSize}px`, height: `${r.iconSize}px`, "--jp2-status-color": col, "--jp2-status-outline": cssColorMix(col, 35) } }, [
           showIconBg ? el("div", { class: "icon-bg", style: { background: col } }) : null,
           showIconCircle ? el("div", { class: "icon-circle" }) : null,
-          el("ha-icon", { icon: r.icon, style: `--mdc-icon-size:${r.innerSize}px; color:${col};` }),
+          el("ha-icon", { icon: r.icon, style: (iconColorMode === "colored")
+            ? `--mdc-icon-size:${r.innerSize}px; color:${col};`
+            : `--mdc-icon-size:${r.innerSize}px; color: var(--state-icon-color, var(--paper-item-icon-color, var(--primary-text-color))); opacity: .75;` }),
         ]);
 
         const topLeft = el("div", { style: { display: "flex", alignItems: "center", gap: "10px", minWidth: "0" } }, [
@@ -2045,7 +2064,9 @@ class Jp2AirQualityCard extends HTMLElement {
         const iconWrap = el("div", { class: "icon-wrap", style: { width: `${r.iconSize}px`, height: `${r.iconSize}px`, "--jp2-status-color": col, "--jp2-status-outline": cssColorMix(col, 35) } }, [
           showIconBg ? el("div", { class: "icon-bg", style: { background: col } }) : null,
           showIconCircle ? el("div", { class: "icon-circle" }) : null,
-          el("ha-icon", { icon: r.icon, style: `--mdc-icon-size:${r.innerSize}px; color:${col};` }),
+          el("ha-icon", { icon: r.icon, style: (iconColorMode === "colored")
+            ? `--mdc-icon-size:${r.innerSize}px; color:${col};`
+            : `--mdc-icon-size:${r.innerSize}px; color: var(--state-icon-color, var(--paper-item-icon-color, var(--primary-text-color))); opacity: .75;` }),
         ]);
 
         if (c.aqi_show_sensor_icon !== false) row.appendChild(iconWrap);
@@ -2696,6 +2717,7 @@ class Jp2AirQualityCardEditor extends HTMLElement {
       aqi_icon_inner_size: "Taille pictogramme",
       aqi_icon_background: "Fond icône",
       aqi_icon_circle: "Cercle icône",
+      aqi_icon_color_mode: "Mode couleur icône",
     };
     return map[n] || map[key] || key;
   }
@@ -2719,6 +2741,7 @@ class Jp2AirQualityCardEditor extends HTMLElement {
       aqi_tile_transparent: "Si activé, supprime le fond gris des tuiles (bordure uniquement).",
       aqi_tile_outline_transparent: "Si activé, supprime aussi la bordure des tuiles (aucun contour).",
       aqi_tiles_icons_only: "Uniquement en disposition horizontale : n’affiche que l’icône de chaque capteur.",
+      aqi_icon_color_mode: "Pictogramme : coloré (couleur du statut) ou transparent (couleur du thème).",
       aqi_global_svg_enabled: "Affiche une icône SVG au-dessus du statut global (good/warn/bad).",
       aqi_global_svg_position: "Position : global = à droite (au-dessus du statut) ; center = centré en haut de la carte.",
       aqi_global_svg_align: "Alignement horizontal du SVG (gauche/centre/droite).",
@@ -3192,6 +3215,10 @@ class Jp2AirQualityCardEditor extends HTMLElement {
 
   _schemaAqiIconStyle() {
     return [
+      { name: "aqi_icon_color_mode", selector: { select: { options: [
+        { label: "Coloré (statut)", value: "colored" },
+        { label: "Transparent (thème)", value: "transparent" },
+      ], mode: "dropdown" } } },
       { name: "aqi_icon_size", selector: { number: { min: 16, max: 80, mode: "box", step: 1 } } },
       { name: "aqi_icon_inner_size", selector: { number: { min: 10, max: 60, mode: "box", step: 1 } } },
       { name: "aqi_icon_background", selector: { boolean: {} } },
