@@ -4,9 +4,9 @@
 
 <br>
 
-[![Latest Version][version_shield]][releases]
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/jp2creation/JP2-Air-Quality-Card?style=flat-square)
 [![HACS Custom][hacs_shield]][hacs]
-[![Downloads][downloads_total_shield]][releases]
+[![Latest Version][version_shield]][releases]
 [![Buy me a coffee][buy_me_a_coffee_shield]][buy_me_a_coffee]
 
 </div>
