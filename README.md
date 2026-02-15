@@ -20,7 +20,7 @@
 
 <br>
 
-# JP2 Air Quality Card
+# <img src="docs/images/home-assistant-icon-flat.png" alt="ha" height="40px">  JP2 Air Quality Card 
 
 A **Home Assistant Lovelace** card with a clean **dashboard look** to display **air quality & comfort** at a glance  
 (CO₂, VOC, radon, pressure, temperature, humidity… from airthings, netatmo, Xiaomi and others devices ) with a **colored gauge**, a **status label**, an optional **AQI summary**, and an integrated **history graph**.
