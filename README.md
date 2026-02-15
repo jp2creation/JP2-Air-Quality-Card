@@ -364,7 +364,7 @@ entities:
 
 ## Visual editor
 
-<img src="docs/images/visual-editor.png" alt="JP2 Air Quality visual editor" width="60%"><img src="docs/images/editor-aqi.png" alt="JP2 Air Quality visual editor" width="40%">
+<img src="docs/images/visual.png" alt="JP2 Air Quality visual editor" width="60%"><img src="docs/images/editor-aqi.png" alt="JP2 Air Quality visual editor" width="40%">
 
 <br>
 
