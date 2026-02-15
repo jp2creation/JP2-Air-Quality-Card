@@ -2,13 +2,10 @@
   JP2 Air Quality Card
   File name must remain: jp2-air-quality.js
 
-  Release notes — v2.0.6
-  - Ref: visualisateur d’historique plein écran (tap sur le mini-graphe) : plages rapides, stats, tooltips, seuils.
-  - UX: clic sur l’en-tête/repère ouvre “Plus d’infos” (capteur) ; clic sur le graphe ouvre le visualisateur.
-  - Perf: downsampling de l’historique + cache partagé (mini-graphe + visualiseur).
-  - Back-compat: configs v2.x supportées ; options visualizer_* facultatives.
-  - Editor: sections repliables en accordéon dans chaque onglet (sans perte de focus à la saisie).
+  Release notes — v2.0.6 (version actuelle)
+  - Éditeur : ajout d’un accordéon sur chaque bloc dans les onglets.
 */
+
 
 const CARD_TYPE = "jp2-air-quality";
 const CARD_NAME = "JP2 Air Quality";
@@ -2775,13 +2772,6 @@ class Jp2AirQualityCardEditor extends HTMLElement {
     this._tab = "general";
     this._raf = null;
 
-
-    // Accordion state for collapsible editor sections
-    this._accState = Object.create(null);
-    this._accOpenByTab = Object.create(null);
-    this._currentTabForSections = "general";
-    this._sectionKeyCounts = Object.create(null);
-    this._onAccordionToggle = this._onAccordionToggle.bind(this);
     this._onTabClick = this._onTabClick.bind(this);
     this._onFormValueChanged = this._onFormValueChanged.bind(this);
     this._onOverridesChanged = this._onOverridesChanged.bind(this);
@@ -2934,28 +2924,17 @@ class Jp2AirQualityCardEditor extends HTMLElement {
         .card-head .p { font-size: 12px; opacity: .7; margin-top: 2px; }
         .card-body { padding: 12px 14px 14px; }
 
-        /* Accordion sections (collapsible blocks per tab) */
-        details.acc.card { display:block; }
-        summary.acc-sum { list-style: none; cursor: pointer; user-select:none; }
-        summary.acc-sum::-webkit-details-marker { display:none; }
-        details.acc:not([open]) > summary.card-head { border-bottom: none; }
-        details.acc > summary.card-head { align-items: center; }
-        .acc-head-left { min-width:0; }
-        .acc-icon {
-          width: 18px; height: 18px;
-          display:flex; align-items:center; justify-content:center;
-          opacity: .70;
-          flex: 0 0 auto;
+        /* Accordéon des blocs (dans chaque onglet) */
+        details.card.sec { display:block; }
+        summary.sec-sum { list-style:none; cursor:pointer; user-select:none; }
+        summary.sec-sum::-webkit-details-marker { display:none; }
+        .sec-chev {
+          opacity: .65;
+          --mdc-icon-size: 20px;
+          transition: transform .16s ease;
         }
-        .acc-icon::before {
-          content: "";
-          width: 8px; height: 8px;
-          border-right: 2px solid currentColor;
-          border-bottom: 2px solid currentColor;
-          transform: rotate(45deg);
-          transition: transform .14s ease;
-        }
-        details.acc[open] .acc-icon::before { transform: rotate(-135deg); }
+        details.sec[open] .sec-chev { transform: rotate(180deg); }
+
         ha-form { display:block; }
         .muted { font-size: 12px; opacity: .72; line-height: 1.35; }
 
@@ -3065,10 +3044,6 @@ class Jp2AirQualityCardEditor extends HTMLElement {
     const badge = this.shadowRoot.getElementById("modeBadge");
     const modeText = this.shadowRoot.getElementById("modeText");
     const isAqi = this._isAqi;
-
-    // Reset accordion keys for this tab render (stable keys per tab + title)
-    this._currentTabForSections = tabId;
-    this._sectionKeyCounts = Object.create(null);
     modeText.textContent = isAqi ? "AQI (multi-capteurs)" : "Capteur (1 entité)";
     badge.querySelector(".dot").style.background = isAqi ? "rgba(76,175,80,.9)" : "rgba(3,169,244,.9)";
 
@@ -3237,80 +3212,32 @@ class Jp2AirQualityCardEditor extends HTMLElement {
     return root;
   }
 
+
   _section(title, subtitle, bodyEl) {
-    const tab = this._currentTabForSections || this._tab || "general";
-    const safeTitle = _jp2EscapeHtml(String(title || ""));
-    const safeSub = subtitle ? _jp2EscapeHtml(String(subtitle || "")) : "";
+    // Accordion (one block per section inside each tab)
+    const card = document.createElement("details");
+    card.className = "card sec";
+    card.open = true;
 
-    const base = `${tab}::${String(title || "")}`;
-    const idx = (this._sectionKeyCounts && this._sectionKeyCounts[base]) ? this._sectionKeyCounts[base] : 0;
-    if (!this._sectionKeyCounts) this._sectionKeyCounts = Object.create(null);
-    this._sectionKeyCounts[base] = idx + 1;
-    const key = idx ? `${base}#${idx}` : base;
-
-    // Default behavior: accordion per tab (one open at a time). Keep user's choice.
-    let open = (typeof this._accState[key] === "boolean") ? this._accState[key] : null;
-    if (open === null) {
-      const already = this._accOpenByTab[tab];
-      if (already) open = (already === key);
-      else {
-        open = true; // first section of tab opens by default
-        this._accOpenByTab[tab] = key;
-      }
-      this._accState[key] = open;
-    }
-
-    const details = document.createElement("details");
-    details.className = "card acc";
-    details.dataset.tab = tab;
-    details.dataset.key = key;
-    details.open = !!open;
-    details.addEventListener("toggle", this._onAccordionToggle);
-
-    const sum = document.createElement("summary");
-    sum.className = "card-head acc-sum";
-    sum.innerHTML = `
-      <div class="acc-head-left">
-        <div class="h">${safeTitle}</div>
-        <div class="p">${safeSub}</div>
+    const head = document.createElement("summary");
+    head.className = "card-head sec-sum";
+    head.innerHTML = `
+      <div>
+        <div class="h">${title}</div>
+        <div class="p">${subtitle || ""}</div>
       </div>
-      <div class="acc-icon" aria-hidden="true"></div>
+      <ha-icon class="sec-chev" icon="mdi:chevron-down"></ha-icon>
     `;
 
     const body = document.createElement("div");
     body.className = "card-body";
-    if (bodyEl) body.appendChild(bodyEl);
+    body.appendChild(bodyEl);
 
-    details.appendChild(sum);
-    details.appendChild(body);
-    return details;
+    card.appendChild(head);
+    card.appendChild(body);
+    return card;
   }
 
-  _onAccordionToggle(ev) {
-    const det = ev.currentTarget;
-    if (!det || !det.dataset) return;
-    const tab = det.dataset.tab || this._tab || "general";
-    const key = det.dataset.key || "";
-    const isOpen = !!det.open;
-
-    // Persist state
-    if (key) this._accState[key] = isOpen;
-
-    if (isOpen) {
-      // Close other sections in the same tab (true accordion)
-      const all = Array.from(this.shadowRoot?.querySelectorAll(`details.acc[data-tab="${tab}"]`) || []);
-      for (const d of all) {
-        if (d !== det && d.open) {
-          d.open = false;
-          const k = d.dataset?.key;
-          if (k) this._accState[k] = false;
-        }
-      }
-      this._accOpenByTab[tab] = key;
-    } else if (this._accOpenByTab[tab] === key) {
-      this._accOpenByTab[tab] = null;
-    }
-  }
 
   _makeForm(schema, data) {
     const form = document.createElement("ha-form");
