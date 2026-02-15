@@ -9,7 +9,15 @@
 [![Latest Version][version_shield]][releases]
 [![Buy me a coffee][buy_me_a_coffee_shield]][buy_me_a_coffee]
 
+ ### 
+-- **[Installation](#installation)**
+-- **[Quick start](#quick-start)**
+-- **[Examples](#examples)**
+-- **[Options](#options)**
+-- **[Visual editor](#visual-editor)**
+--
 
+<br>
 </div>
 
 <br>
@@ -27,18 +35,6 @@ A **Home Assistant Lovelace** card with a clean **dashboard look** to display **
 
 <img src="docs/images/dash1.png" alt="JP2 Air Quality Card preview" width="100%">
 
- ## Table of contents
--- **[Installation](#installation)**
--- **[Quick start](#quick-start)**
--- **[Examples](#examples)**
--- **[Options](#options)**
--- **[Visual editor](#visual-editor)**
-
-<br>
-
----
-
-<br>
 
 ## Installation
 
