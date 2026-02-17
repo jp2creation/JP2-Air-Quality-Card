@@ -29,7 +29,7 @@ A **Home Assistant Lovelace** card with a clean **dashboard look** to display **
 
 > [!NOTE]
 > This module supports values from any Home Assistant–compatible sensor, so you can display and interpret indoor air quality from all your entities in one unified card.<br><br>
-> <img src="docs/images/airthings.png" alt="airthings" height="18px"> <img src="docs/images/xiaomi.png" alt="xiaomi" height="18px"> <img src="docs/images/netatmo.png" alt="netatmo" height="18px"> <img src="docs/images/sonoff.png" alt="sonoff" height="18px"> <img src="docs/images/tuya.png" alt="tuya" height="18px"> ...
+> <img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/airthings.png" alt="airthings" height="18px"> <img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/xiaomi.png" alt="xiaomi" height="18px"> <img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/netatmo.png" alt="netatmo" height="18px"> <img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/sonoff.png" alt="sonoff" height="18px"> <img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/tuya.png" alt="tuya" height="18px"> ...
 > 
 <br>
 
@@ -83,7 +83,7 @@ entities:
 <br>
 
 ---
-<img src="docs/images/aqi-icon.png" alt="JP2 Air Quality Card preview" width="30%"><img src="docs/images/aqi-capteurs.png" alt="JP2 Air Quality Card preview" width="30%"><img src="docs/images/dash1.png" alt="JP2 Air Quality Card preview" width="30%">
+<img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/aqi-icon.png" alt="JP2 Air Quality Card preview" width="30%"><img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/radon.png" alt="JP2 Air Quality Card preview" width="30%">
 
 <br>
 
@@ -358,7 +358,7 @@ entities:
 
 ## Visual editor
 
-<img src="docs/images/visual.png" alt="JP2 Air Quality visual editor" width="60%"><img src="docs/images/editor-aqi.png" alt="JP2 Air Quality visual editor" width="40%">
+<img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/visual.png" alt="JP2 Air Quality visual editor" width="60%"><img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/a0d73a495ff64d8c75c4b54cfbd05606d505f61f/docs/images/editor-aqi.png" alt="JP2 Air Quality visual editor" width="40%">
 
 <br>
 
