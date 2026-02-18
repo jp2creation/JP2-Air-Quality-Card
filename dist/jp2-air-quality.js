@@ -2,7 +2,10 @@
   JP2 Air Quality Card
   File name must remain: jp2-air-quality.js
 
-  Release notes — v2.1.3 (version actuelle)
+  Release notes — v2.1.4 (version actuelle)
+  - New: Support tap_action / hold_action / double_tap_action (Lovelace standard), incl. confirmation / navigate / url / call-service / fire-dom-event.
+
+  Release notes — v2.1.3
   - Fix: fallback color-mix Safari/vars CSS (résolution via computedStyle).
   - Fix: refresh key inclut unit_of_measurement + last_updated.
   - Fix: mini-graphe interne basé sur timestamps + downsample (perf).
@@ -31,7 +34,7 @@
 const CARD_TYPE = "jp2-air-quality";
 const CARD_NAME = "JP2 Air Quality";
 const CARD_DESC = "Air quality card (sensor + AQI multi-sensors) with internal history graph, full-screen visualizer, and a fluid visual editor (v2).";
-const CARD_VERSION = "2.1.3";
+const CARD_VERSION = "2.1.4";
 
 
 const CARD_BUILD_DATE = "2026-02-18";
@@ -338,6 +341,196 @@ function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj || {}));
 }
 
+// -------------------------
+// Lovelace actions (tap/hold/double_tap)
+// -------------------------
+function jp2FireEvent(node, type, detail = {}, options = {}) {
+  try {
+    node?.dispatchEvent(new CustomEvent(type, {
+      detail,
+      bubbles: options.bubbles !== false,
+      composed: options.composed !== false,
+      cancelable: options.cancelable === true,
+    }));
+  } catch (_) {}
+}
+
+function jp2NormalizeActionConfig(actionCfg, fallback) {
+  // Accept "more-info" shorthand or full object
+  if (actionCfg === undefined || actionCfg === null) return deepClone(fallback || { action: "none" });
+  if (typeof actionCfg === "string") return { action: actionCfg };
+  if (typeof actionCfg !== "object" || Array.isArray(actionCfg)) return deepClone(fallback || { action: "none" });
+  const out = { ...actionCfg };
+  if (!out.action && typeof fallback === "object" && fallback?.action) out.action = fallback.action;
+  out.action = String(out.action || "none");
+  return out;
+}
+
+function jp2ActionHasAction(actionCfg) {
+  const a = actionCfg && typeof actionCfg === "object" ? String(actionCfg.action || "none") : "none";
+  return a && a !== "none";
+}
+
+function jp2EventPathHasNoCardAction(ev) {
+  try {
+    const path = ev?.composedPath?.() || [];
+    for (const n of path) {
+      if (!n) continue;
+      if (n?.dataset && (n.dataset.jp2NoCardAction === "1" || n.dataset.jp2NoCardAction === "true")) return true;
+      if (typeof n?.getAttribute === "function" && (n.getAttribute("data-jp2-no-card-action") === "1")) return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+// Basic gesture handler: supports touch & mouse (pointer events) with hold + double-tap.
+function jp2BindLovelaceActionHandler(targetEl, {
+  onAction,
+  hasDouble = () => false,
+  hasHold = () => false,
+  shouldIgnore = () => false,
+  holdTime = 500,
+  doubleTapTime = 250,
+  moveThreshold = 10,
+} = {}) {
+  if (!targetEl) return;
+
+  let pointerDown = false;
+  let startX = 0;
+  let startY = 0;
+  let holdTimer = null;
+  let holdFired = false;
+
+  let pendingTapTimer = null;
+  let pendingTapEvent = null;
+
+  const clearHold = () => {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+  };
+  const clearPendingTap = () => {
+    if (pendingTapTimer) { clearTimeout(pendingTapTimer); pendingTapTimer = null; }
+    pendingTapEvent = null;
+  };
+
+  const dist = (x1, y1, x2, y2) => Math.hypot((x1 - x2), (y1 - y2));
+
+  const onPointerDown = (ev) => {
+    try {
+      if (shouldIgnore(ev)) return;
+      if (ev?.button !== undefined && ev.button !== 0) return; // left click only
+      pointerDown = true;
+      holdFired = false;
+      startX = ev?.clientX ?? 0;
+      startY = ev?.clientY ?? 0;
+
+      clearHold();
+      if (hasHold()) {
+        holdTimer = setTimeout(() => {
+          if (!pointerDown) return;
+          holdFired = true;
+          clearPendingTap();
+          try { onAction?.("hold", ev); } catch (_) {}
+        }, holdTime);
+      }
+    } catch (_) {}
+  };
+
+  const onPointerMove = (ev) => {
+    try {
+      if (!pointerDown) return;
+      const x = ev?.clientX ?? 0;
+      const y = ev?.clientY ?? 0;
+      if (dist(startX, startY, x, y) > moveThreshold) {
+        clearHold();
+      }
+    } catch (_) {}
+  };
+
+  const onPointerUp = (ev) => {
+    try {
+      if (!pointerDown) return;
+      pointerDown = false;
+      clearHold();
+
+      if (holdFired) {
+        // prevent the following click from doing something else
+        try { ev?.preventDefault?.(); } catch (_) {}
+        return;
+      }
+
+      if (shouldIgnore(ev)) return;
+
+      const doubleEnabled = !!hasDouble();
+      if (!doubleEnabled) {
+        try { onAction?.("tap", ev); } catch (_) {}
+        return;
+      }
+
+      // Double tap enabled: wait a bit before firing single tap
+      if (pendingTapTimer) {
+        // second tap
+        clearPendingTap();
+        try { onAction?.("double_tap", ev); } catch (_) {}
+        return;
+      }
+
+      pendingTapEvent = ev;
+      pendingTapTimer = setTimeout(() => {
+        const e = pendingTapEvent;
+        clearPendingTap();
+        try { onAction?.("tap", e); } catch (_) {}
+      }, doubleTapTime);
+    } catch (_) {}
+  };
+
+  const onPointerCancel = () => {
+    pointerDown = false;
+    clearHold();
+  };
+
+  const onContextMenu = (ev) => {
+    try {
+      if (shouldIgnore(ev)) return;
+      if (!hasHold()) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      clearHold();
+      clearPendingTap();
+      try { onAction?.("hold", ev); } catch (_) {}
+    } catch (_) {}
+  };
+
+  const onKeyDown = (ev) => {
+    try {
+      if (shouldIgnore(ev)) return;
+      const k = ev?.key;
+      if (k === "Enter" || k === " ") {
+        ev.preventDefault();
+        try { onAction?.("tap", ev); } catch (_) {}
+      }
+    } catch (_) {}
+  };
+
+  targetEl.addEventListener("pointerdown", onPointerDown);
+  targetEl.addEventListener("pointermove", onPointerMove);
+  targetEl.addEventListener("pointerup", onPointerUp);
+  targetEl.addEventListener("pointercancel", onPointerCancel);
+  targetEl.addEventListener("contextmenu", onContextMenu);
+  targetEl.addEventListener("keydown", onKeyDown);
+
+  // Return unbind fn
+  return () => {
+    try { targetEl.removeEventListener("pointerdown", onPointerDown); } catch (_) {}
+    try { targetEl.removeEventListener("pointermove", onPointerMove); } catch (_) {}
+    try { targetEl.removeEventListener("pointerup", onPointerUp); } catch (_) {}
+    try { targetEl.removeEventListener("pointercancel", onPointerCancel); } catch (_) {}
+    try { targetEl.removeEventListener("contextmenu", onContextMenu); } catch (_) {}
+    try { targetEl.removeEventListener("keydown", onKeyDown); } catch (_) {}
+  };
+}
+
+
+
 
 
 
@@ -594,6 +787,12 @@ class Jp2AirQualityCard extends HTMLElement {
       background_enabled: false,
       bar_enabled: true,
       show_graph: true,
+
+       // Lovelace actions
+       tap_action: { action: "more-info" },
+       hold_action: { action: "more-info" },
+       double_tap_action: { action: "none" },
+
 
       // display (sensor)
       show_top: true,
@@ -1112,6 +1311,12 @@ class Jp2AirQualityCard extends HTMLElement {
     merged.visualizer_show_stats = merged.visualizer_show_stats !== false;
     merged.visualizer_show_thresholds = merged.visualizer_show_thresholds !== false;
     merged.visualizer_smooth_default = !!merged.visualizer_smooth_default;
+
+
+     // Lovelace actions (tap/hold/double_tap)
+     merged.tap_action = jp2NormalizeActionConfig(merged.tap_action, { action: "more-info" });
+     merged.hold_action = jp2NormalizeActionConfig(merged.hold_action, { action: "more-info" });
+     merged.double_tap_action = jp2NormalizeActionConfig(merged.double_tap_action, { action: "none" });
 
     merged.aqi_layout = String(merged.aqi_layout || "vertical");
 
@@ -1828,14 +2033,16 @@ if (p === "custom") {
     this._aqiWrap = this.shadowRoot.getElementById("aqi");
 
     // Interactions (sensor mode)
-    try { this._header?.addEventListener("click", this._onHeaderClick, { passive: true }); } catch (_) {}
+    // Graph is an internal control (visualizer) → exclude from card actions.
+    try { this._graphWrap?.setAttribute("data-jp2-no-card-action", "1"); } catch (_) {}
     try { this._graphWrap?.addEventListener("click", this._onGraphClick); } catch (_) {}
-
-    // Accessibility: keyboard activation
-    this._a11yMakeButton(this._header, this._onHeaderClick);
     this._a11yMakeButton(this._graphWrap, this._onGraphClick);
 
-    // Visualizer elements
+    // Lovelace actions (tap/hold/double_tap) on the whole card
+    try { this._cardEl = this.shadowRoot?.querySelector("ha-card") || null; } catch (_) { this._cardEl = null; }
+    this._installCardActionHandlers();
+
+// Visualizer elements
     this._vizOverlayEl = this.shadowRoot.getElementById("vizOverlay");
     this._vizTitleEl = this.shadowRoot.getElementById("vizTitle");
     this._vizSubEl = this.shadowRoot.getElementById("vizSub");
@@ -1879,6 +2086,133 @@ if (p === "custom") {
       }
     } catch (_) {}
   }
+
+
+  _installCardActionHandlers() {
+    if (this._jp2ActionsBound) return;
+    const card = this._cardEl || (this.shadowRoot ? this.shadowRoot.querySelector("ha-card") : null);
+    if (!card) return;
+    this._jp2ActionsBound = true;
+
+    try { card.setAttribute("data-jp2-actions", "1"); } catch (_) {}
+
+    this._jp2UnbindActions = jp2BindLovelaceActionHandler(card, {
+      onAction: (gesture, ev) => this._handleCardGesture(gesture, ev),
+      hasDouble: () => jp2ActionHasAction(this._config?.double_tap_action),
+      hasHold: () => jp2ActionHasAction(this._config?.hold_action),
+      shouldIgnore: (ev) => jp2EventPathHasNoCardAction(ev),
+    });
+  }
+
+  _handleCardGesture(gesture, ev) {
+    const c = this._config || {};
+    if (!c) return;
+
+    const map = { tap: "tap_action", hold: "hold_action", double_tap: "double_tap_action" };
+    const key = map[String(gesture || "tap")] || "tap_action";
+    const actionCfg = jp2NormalizeActionConfig(c[key], { action: "none" });
+
+    // Support confirmation
+    const conf = actionCfg?.confirmation;
+    if (conf) {
+      const msg = (typeof conf === "string") ? conf
+        : (conf && typeof conf === "object" ? (conf.text || conf.message || "Confirmer ?") : "Confirmer ?");
+      try { if (!window.confirm(msg)) return; } catch (_) {}
+    }
+
+    // Optional haptic (best-effort)
+    try { if (actionCfg?.haptic && navigator?.vibrate) navigator.vibrate(10); } catch (_) {}
+
+    this._executeLovelaceAction(actionCfg, ev);
+  }
+
+  _getDefaultActionEntityId() {
+    const c = this._config || {};
+    if (c.entity) return c.entity;
+
+    // AQI mode: if only one entity, use it as default
+    const ents = Array.isArray(c.aqi_entities) ? c.aqi_entities : [];
+    if (String(c.card_mode || "") === "aqi" && ents.length === 1) return ents[0];
+
+    return null;
+  }
+
+  _executeLovelaceAction(actionCfg, ev) {
+    const hass = this._hass;
+    const a = String(actionCfg?.action || "none");
+    if (!a || a === "none") return;
+
+    // Allow optional per-action entity override (extra compatible)
+    const entityId = actionCfg?.entity || this._getDefaultActionEntityId();
+
+    if (a === "more-info") {
+      if (!entityId) return;
+      jp2FireEvent(this, "hass-more-info", { entityId });
+      return;
+    }
+
+    if (a === "toggle") {
+      if (!hass || !entityId) return;
+      try { hass.callService("homeassistant", "toggle", { entity_id: entityId }); } catch (_) {}
+      return;
+    }
+
+    if (a === "navigate") {
+      const path = String(actionCfg?.navigation_path || "");
+      if (!path) return;
+      jp2FireEvent(this, "hass-navigate", { navigation_path: path });
+      try {
+        if (path.startsWith("http")) window.location.assign(path);
+        else {
+          history.pushState(null, "", path);
+          window.dispatchEvent(new Event("location-changed", { bubbles: true, composed: true }));
+        }
+      } catch (_) {}
+      return;
+    }
+
+    if (a === "url") {
+      const url = String(actionCfg?.url_path || "");
+      if (!url) return;
+      try { window.open(url, "_blank"); } catch (_) { try { window.location.assign(url); } catch (__) {} }
+      return;
+    }
+
+    if (a === "call-service") {
+      if (!hass) return;
+      const svc = String(actionCfg?.service || "");
+      const [domain, service] = svc.includes(".") ? svc.split(".", 2) : [null, null];
+      if (!domain || !service) return;
+      const data = (actionCfg?.service_data && typeof actionCfg.service_data === "object") ? actionCfg.service_data : {};
+      try { hass.callService(domain, service, data); } catch (_) {}
+      return;
+    }
+
+    if (a === "fire-dom-event") {
+      jp2FireEvent(this, "ll-custom", actionCfg);
+      return;
+    }
+  }
+
+  _updateCardInteractivity() {
+    const card = this._cardEl || (this.shadowRoot ? this.shadowRoot.querySelector("ha-card") : null);
+    if (!card) return;
+    const c = this._config || {};
+    const any = jp2ActionHasAction(c.tap_action) || jp2ActionHasAction(c.hold_action) || jp2ActionHasAction(c.double_tap_action);
+
+    try {
+      if (any) {
+        card.style.cursor = "pointer";
+        card.setAttribute("role", "button");
+        card.tabIndex = 0;
+      } else {
+        card.style.cursor = "";
+        card.removeAttribute("role");
+        card.removeAttribute("tabindex");
+      }
+    } catch (_) {}
+  }
+
 
   _a11yMakeButton(el, onActivate) {
     try {
@@ -1975,6 +2309,10 @@ if (p === "custom") {
         card.style.setProperty("--jp2-aqi-cols", String(clamp(Number(c.aqi_tiles_per_row || 3), 1, 6)));
         card.style.setProperty("--jp2-aqi-tile-radius", `${clamp(Number(c.aqi_tile_radius ?? 16), 0, 40)}px`);
       }
+
+      // Update Lovelace action affordance
+      this._updateCardInteractivity();
+
 
       if (String(c.card_mode) === "aqi") {
         this._renderAQICard();
@@ -2952,6 +3290,7 @@ if (xy.length < 2) {
 
       body = el("div", { class: "tiles" }, rows.map((r) => {
         const tile = el("div", { class: `tile ${c.aqi_tile_color_enabled ? "colored" : ""} ${c.aqi_tile_transparent ? "transparent" : ""} ${c.aqi_tile_outline_transparent ? "outline-transparent" : ""} ${iconsOnly ? "icons-only" : ""}` });
+         try { tile.setAttribute("data-jp2-no-card-action", "1"); } catch (_) {}
         const col = r.status.color;
         tile.style.setProperty("--jp2-aqi-tile-color", col);
         const _b = cssColorMix(col, 32);
@@ -2991,7 +3330,8 @@ if (xy.length < 2) {
           if (val) tile.appendChild(val);
         }
 
-        tile.addEventListener("click", () => {
+        tile.addEventListener("click", (ev) => {
+          try { ev?.stopPropagation?.(); } catch (_) {}
           this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: r.eid }, bubbles: true, composed: true }));
         });
 
@@ -3011,6 +3351,7 @@ if (xy.length < 2) {
     } else {
       body = el("div", { class: "aqi-list" }, rows.map((r) => {
         const row = el("div", { class: "aqi-row" });
+         try { row.setAttribute("data-jp2-no-card-action", "1"); } catch (_) {}
         const col = r.status.color;
 
         const iconWrap = el("div", { class: "icon-wrap", style: { width: `${r.iconSize}px`, height: `${r.iconSize}px`, "--jp2-status-color": col, "--jp2-status-outline": cssColorMix(col, 35) } }, [
@@ -3044,7 +3385,8 @@ if (xy.length < 2) {
         }
         row.appendChild(right);
 
-        row.addEventListener("click", () => {
+        row.addEventListener("click", (ev) => {
+          try { ev?.stopPropagation?.(); } catch (_) {}
           this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: r.eid }, bubbles: true, composed: true }));
         });
 
