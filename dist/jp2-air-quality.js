@@ -2,7 +2,10 @@
   JP2 Air Quality Card
   File name must remain: jp2-air-quality.js
 
-  Release notes — v2.1.4 (version actuelle)
+  Release notes — v2.1.5 (version actuelle)
+  - New: Éditeur visuel (onglet Général) : ajout des champs tap_action / hold_action / double_tap_action (Lovelace standard).
+
+  Release notes — v2.1.4
   - New: Support tap_action / hold_action / double_tap_action (Lovelace standard), incl. confirmation / navigate / url / call-service / fire-dom-event.
 
   Release notes — v2.1.3
@@ -34,10 +37,10 @@
 const CARD_TYPE = "jp2-air-quality";
 const CARD_NAME = "JP2 Air Quality";
 const CARD_DESC = "Air quality card (sensor + AQI multi-sensors) with internal history graph, full-screen visualizer, and a fluid visual editor (v2).";
-const CARD_VERSION = "2.1.4";
+const CARD_VERSION = "2.1.5";
 
 
-const CARD_BUILD_DATE = "2026-02-18";
+const CARD_BUILD_DATE = "2026-02-19";
 // -------------------------
 // Defaults / presets
 // -------------------------
@@ -3463,6 +3466,11 @@ class Jp2AirQualityCardEditor extends HTMLElement {
       merged.graph_color_mode = String(merged.graph_color_mode || "segments");
       merged.graph_position = String(merged.graph_position || "below_top");
 
+      // Lovelace actions (keep UI safe even if YAML has null/invalid values)
+      merged.tap_action = jp2NormalizeActionConfig(merged.tap_action, { action: "more-info" });
+      merged.hold_action = jp2NormalizeActionConfig(merged.hold_action, { action: "more-info" });
+      merged.double_tap_action = jp2NormalizeActionConfig(merged.double_tap_action, { action: "none" });
+
       // visualizer (full-screen history viewer)
       merged.visualizer_enabled = merged.visualizer_enabled !== false;
       merged.visualizer_ranges = String(merged.visualizer_ranges ?? "6,12,24,72,168");
@@ -3819,6 +3827,14 @@ class Jp2AirQualityCardEditor extends HTMLElement {
           ));
         }
 
+        // Actions Lovelace (tap/hold/double tap)
+        root.appendChild(this._section(
+          "Interactions",
+          "Actions Lovelace standard : tap, appui long, double-tap (navigate / url / service / event / etc.).",
+          this._actionsEditorBody(),
+          "card.actions"
+        ));
+
 return root;
       }
       if (tabId === "display") {
@@ -3886,6 +3902,14 @@ root.appendChild(this._section(
         this._makeForm(this._schemaAqiGlobalStatus(), this._config)
       ,
         "aqi.global_status"
+      ));
+
+      // Actions Lovelace (tap/hold/double tap)
+      root.appendChild(this._section(
+        "Interactions",
+        "Actions Lovelace standard : tap, appui long, double-tap (navigate / url / service / event / etc.).",
+        this._actionsEditorBody(),
+        "card.actions"
       ));
 return root;
     }
@@ -4014,6 +4038,9 @@ return root;
       card_mode: "Type de carte",
       entity: "Entité",
       preset: "Preset",
+      tap_action: "Tap action (clic/tap)",
+      hold_action: "Hold action (appui long)",
+      double_tap_action: "Double-tap action",
 // custom preset
 "custom_preset.type": "Type de preset",
 "custom_preset.unit_fallback": "Unité (fallback)",
@@ -4154,6 +4181,9 @@ return root;
     const n = String(s?.name || "");
     const key = n.startsWith("bar.") ? n.slice(4) : n;
     const map = {
+      tap_action: "Action au clic/tap sur la carte (Lovelace standard).",
+      hold_action: "Action à l’appui long sur la carte (Lovelace standard).",
+      double_tap_action: "Action au double-tap sur la carte (Lovelace standard).",
 "custom_preset.type": "“Seuils” = plus haut = pire ; “Zone de confort” = bon au milieu.",
 "custom_preset.unit_fallback": "Utilisé si le capteur ne fournit pas d’unité.",
 "custom_preset.decimals": "Nombre de décimales affichées.",
@@ -4298,6 +4328,108 @@ return root;
   // -------------------------
   // Schemas (split forms)
   // -------------------------
+
+  _supportsHaActionSelector() {
+    // HA Core provides a selector (ha-selector-action) in most recent versions.
+    // If not available (older HA), we fall back to a JSON editor.
+    try {
+      return !!customElements.get("ha-selector-action");
+    } catch (_) {
+      return false;
+    }
+  }
+
+  _schemaCardActions() {
+    // Lovelace standard actions
+    // https://www.home-assistant.io/dashboards/actions/
+    return [
+      { name: "tap_action", selector: { action: {} } },
+      { name: "hold_action", selector: { action: {} } },
+      { name: "double_tap_action", selector: { action: {} } },
+    ];
+  }
+
+  _actionsEditorBody() {
+    if (this._supportsHaActionSelector()) {
+      return this._makeForm(this._schemaCardActions(), this._config);
+    }
+
+    // Fallback: JSON textarea editor (still allows advanced configs)
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gap = "10px";
+
+    const note = document.createElement("div");
+    note.className = "muted";
+    note.textContent = "Ton Home Assistant ne semble pas fournir le sélecteur d’actions (ha-selector-action). Édition JSON en fallback.";
+    wrap.appendChild(note);
+
+    const mk = (label, key) => {
+      const box = document.createElement("div");
+      box.style.display = "grid";
+      box.style.gap = "6px";
+
+      const t = document.createElement("div");
+      t.style.fontWeight = "900";
+      t.textContent = label;
+      box.appendChild(t);
+
+      const ta = document.createElement("textarea");
+      ta.rows = 6;
+      ta.spellcheck = false;
+      ta.style.width = "100%";
+      ta.style.resize = "vertical";
+      ta.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+      ta.style.fontSize = "12px";
+      ta.style.padding = "10px";
+      ta.style.borderRadius = "14px";
+      ta.style.border = "1px solid rgba(0,0,0,.18)";
+      ta.style.background = "rgba(0,0,0,.03)";
+      ta.value = JSON.stringify(this._config?.[key] ?? { action: "none" }, null, 2);
+      box.appendChild(ta);
+
+      const err = document.createElement("div");
+      err.className = "muted";
+      err.style.color = "var(--error-color, #db3a34)";
+      err.hidden = true;
+      box.appendChild(err);
+
+      const apply = () => {
+        const raw = String(ta.value || "").trim();
+        if (!raw) {
+          err.hidden = true;
+          const next = deepClone(this._config);
+          delete next[key];
+          this._config = next;
+          this._fireConfigChanged(this._config);
+          return;
+        }
+        try {
+          const parsed = JSON.parse(raw);
+          err.hidden = true;
+          const next = deepClone(this._config);
+          next[key] = parsed;
+          this._config = next;
+          this._fireConfigChanged(this._config);
+        } catch (e) {
+          err.hidden = false;
+          err.textContent = `JSON invalide : ${e && e.message ? e.message : e}`;
+        }
+      };
+
+      ta.addEventListener("change", apply);
+      ta.addEventListener("blur", apply);
+
+      return box;
+    };
+
+    wrap.appendChild(mk("Tap action (clic/tap)", "tap_action"));
+    wrap.appendChild(mk("Hold action (appui long)", "hold_action"));
+    wrap.appendChild(mk("Double-tap action", "double_tap_action"));
+
+    return wrap;
+  }
+
   _schemaSensorGeneral() {
     return [
       { name: "card_mode", selector: { select: { options: [
