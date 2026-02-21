@@ -2,10 +2,7 @@
   JP2 Air Quality Card
   File name must remain: jp2-air-quality.js
 
-  Release notes — v2.1.5 (version actuelle)
-  - New: Éditeur visuel (onglet Général) : section “Interactions” avec sélecteurs Lovelace (déroulant) pour tap_action / hold_action / double_tap_action (hui-action-editor).
-
-  Release notes — v2.1.4
+  Release notes — v2.1.4 (version actuelle)
   - New: Support tap_action / hold_action / double_tap_action (Lovelace standard), incl. confirmation / navigate / url / call-service / fire-dom-event.
 
   Release notes — v2.1.3
@@ -40,7 +37,7 @@ const CARD_DESC = "Air quality card (sensor + AQI multi-sensors) with internal h
 const CARD_VERSION = "2.1.5";
 
 
-const CARD_BUILD_DATE = "2026-02-19";
+const CARD_BUILD_DATE = "2026-02-21";
 // -------------------------
 // Defaults / presets
 // -------------------------
@@ -536,22 +533,6 @@ function jp2BindLovelaceActionHandler(targetEl, {
 
 
 
-
-
-function jp2TryParseJson(s) {
-  const str = String(s || "").trim();
-  if (!str) return null;
-  try {
-    return JSON.parse(str);
-  } catch (_) {
-    return null;
-  }
-}
-
-function jp2SafeStringifyJson(value) {
-  try { return JSON.stringify(value); }
-  catch (_) { try { return JSON.stringify(JSON.parse(String(value))); } catch (__) { return String(value); } }
-}
 
 function jp2StableStringify(value) {
   const seen = new WeakSet();
@@ -2117,8 +2098,9 @@ if (p === "custom") {
 
     this._jp2UnbindActions = jp2BindLovelaceActionHandler(card, {
       onAction: (gesture, ev) => this._handleCardGesture(gesture, ev),
-      hasDouble: () => jp2ActionHasAction(this._config?.double_tap_action),
-      hasHold: () => jp2ActionHasAction(this._config?.hold_action),
+      // Keep behavior aligned with HA defaults when actions are omitted ("default" in UI)
+      hasDouble: () => jp2ActionHasAction(jp2NormalizeActionConfig(this._config?.double_tap_action, { action: "none" })),
+      hasHold: () => jp2ActionHasAction(jp2NormalizeActionConfig(this._config?.hold_action, { action: "more-info" })),
       shouldIgnore: (ev) => jp2EventPathHasNoCardAction(ev),
     });
   }
@@ -2129,7 +2111,12 @@ if (p === "custom") {
 
     const map = { tap: "tap_action", hold: "hold_action", double_tap: "double_tap_action" };
     const key = map[String(gesture || "tap")] || "tap_action";
-    const actionCfg = jp2NormalizeActionConfig(c[key], { action: "none" });
+    const defaults = {
+      tap_action: { action: "more-info" },
+      hold_action: { action: "more-info" },
+      double_tap_action: { action: "none" },
+    };
+    const actionCfg = jp2NormalizeActionConfig(c[key], defaults[key] || { action: "none" });
 
     // Support confirmation
     const conf = actionCfg?.confirmation;
@@ -2183,7 +2170,8 @@ if (p === "custom") {
       try {
         if (path.startsWith("http")) window.location.assign(path);
         else {
-          history.pushState(null, "", path);
+          if (actionCfg?.navigation_replace) history.replaceState(null, "", path);
+          else history.pushState(null, "", path);
           window.dispatchEvent(new Event("location-changed", { bubbles: true, composed: true }));
         }
       } catch (_) {}
@@ -2197,13 +2185,45 @@ if (p === "custom") {
       return;
     }
 
-    if (a === "call-service") {
+    if (a === "perform-action" || a === "call-service") {
       if (!hass) return;
-      const svc = String(actionCfg?.service || "");
+      const svc = String(actionCfg?.perform_action || actionCfg?.service || "");
       const [domain, service] = svc.includes(".") ? svc.split(".", 2) : [null, null];
       if (!domain || !service) return;
-      const data = (actionCfg?.service_data && typeof actionCfg.service_data === "object") ? actionCfg.service_data : {};
-      try { hass.callService(domain, service, data); } catch (_) {}
+      const data = (actionCfg?.data && typeof actionCfg.data === "object")
+        ? actionCfg.data
+        : ((actionCfg?.service_data && typeof actionCfg.service_data === "object") ? actionCfg.service_data : {});
+      const target = (actionCfg?.target && typeof actionCfg.target === "object") ? actionCfg.target : undefined;
+      try {
+        // Newer HA supports target as a 4th param, same as core handleAction.
+        hass.callService(domain, service, data, target);
+      } catch (_) {
+        // Fallback: merge target into data (works on older hass.callService).
+        try { hass.callService(domain, service, { ...(data || {}), ...(target || {}) }); } catch (__) {}
+      }
+      return;
+    }
+
+    if (a === "assist") {
+      if (!hass) return;
+      const pipeline_id = actionCfg?.pipeline_id ?? "last_used";
+      const start_listening = !!actionCfg?.start_listening;
+      try {
+        const ext = hass?.auth?.external;
+        if (ext?.config?.hasAssist && typeof ext.fireMessage === "function") {
+          ext.fireMessage({
+            type: "assist/show",
+            payload: { pipeline_id, start_listening },
+          });
+          return;
+        }
+      } catch (_) {}
+
+      // Best-effort on web: ask HA to open the voice command dialog (if already loaded).
+      jp2FireEvent(this, "show-dialog", {
+        dialogTag: "ha-voice-command-dialog",
+        dialogParams: { pipeline_id, start_listening },
+      });
       return;
     }
 
@@ -2217,7 +2237,10 @@ if (p === "custom") {
     const card = this._cardEl || (this.shadowRoot ? this.shadowRoot.querySelector("ha-card") : null);
     if (!card) return;
     const c = this._config || {};
-    const any = jp2ActionHasAction(c.tap_action) || jp2ActionHasAction(c.hold_action) || jp2ActionHasAction(c.double_tap_action);
+    const tap = jp2NormalizeActionConfig(c.tap_action, { action: "more-info" });
+    const hold = jp2NormalizeActionConfig(c.hold_action, { action: "more-info" });
+    const dbl = jp2NormalizeActionConfig(c.double_tap_action, { action: "none" });
+    const any = jp2ActionHasAction(tap) || jp2ActionHasAction(hold) || jp2ActionHasAction(dbl);
 
     try {
       if (any) {
@@ -3462,10 +3485,6 @@ class Jp2AirQualityCardEditor extends HTMLElement {
     for (const f of Array.from(this.shadowRoot?.querySelectorAll("ha-form") || [])) {
       try { f.hass = hass; } catch (_) {}
     }
-    // Propagation aux sélecteurs d’actions (Lovelace)
-    for (const a of Array.from(this.shadowRoot?.querySelectorAll("hui-action-editor") || [])) {
-      try { a.hass = hass; } catch (_) {}
-    }
   }
 
   setConfig(config) {
@@ -3700,6 +3719,12 @@ class Jp2AirQualityCardEditor extends HTMLElement {
         .ov-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; align-items:start; }
         mwc-button { --mdc-theme-primary: var(--primary-color); }
 
+        /* Interactions (tap / hold / double tap) */
+        .actions-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items:start; }
+        .actions-item { display:block; }
+        .actions-label { font-weight: 900; margin: 0 0 6px; }
+        hui-action-editor { display:block; }
+
         .footer { font-size: 12px; opacity: .65; padding: 2px 2px 0; }
 
       </style>
@@ -3759,10 +3784,6 @@ class Jp2AirQualityCardEditor extends HTMLElement {
     // Assure hass sur tous les ha-form rendus
     for (const f of Array.from(this.shadowRoot.querySelectorAll("ha-form"))) {
       try { f.hass = this._hass; } catch (_) {}
-    }
-    // Assure hass sur tous les sélecteurs d’actions (Lovelace)
-    for (const a of Array.from(this.shadowRoot.querySelectorAll("hui-action-editor"))) {
-      try { a.hass = this._hass; } catch (_) {}
     }
 
     // Refresh previews
@@ -3836,6 +3857,13 @@ class Jp2AirQualityCardEditor extends HTMLElement {
         "sensor.general"
       ));
 
+        root.appendChild(this._section(
+          "Interactions",
+          "Actions au tap / appui long / double appui.",
+          this._actionsEditor(),
+          "sensor.interactions"
+        ));
+
         // Preset personnalisé (capteur libre)
         if (String(this._config?.preset || "") === "custom") {
           root.appendChild(this._section(
@@ -3846,14 +3874,7 @@ class Jp2AirQualityCardEditor extends HTMLElement {
           ));
         }
 
-        root.appendChild(this._section(
-          "Interactions",
-          "Actions Lovelace standard : clic, appui long, double-clic.",
-          this._interactionsEditor(),
-          "sensor.interactions"
-        ));
-
-        return root;
+return root;
       }
       if (tabId === "display") {
         root.appendChild(this._section(
@@ -3907,6 +3928,13 @@ return root;
       ,
         "aqi.general"
       ));
+
+      root.appendChild(this._section(
+        "Interactions",
+        "Actions au tap / appui long / double appui.",
+        this._actionsEditor(),
+        "aqi.interactions"
+      ));
 root.appendChild(this._section(
         "Statut global — Icône SVG",
         "Optionnel : affiche une icône SVG au-dessus du statut global (Bon/Moyen/Mauvais). Couleurs = statut ou perso, avec cercle et fond optionnels.",
@@ -3920,13 +3948,6 @@ root.appendChild(this._section(
         this._makeForm(this._schemaAqiGlobalStatus(), this._config)
       ,
         "aqi.global_status"
-      ));
-
-      root.appendChild(this._section(
-        "Interactions",
-        "Actions Lovelace standard : clic, appui long, double-clic.",
-        this._interactionsEditor(),
-        "aqi.interactions"
       ));
 return root;
     }
@@ -4337,173 +4358,6 @@ return root;
   }
 
   // -------------------------
-  // Interactions (Lovelace actions)
-  // -------------------------
-  _interactionsEditor() {
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gap = "12px";
-
-    const rows = [
-      { key: "tap_action", label: "Tap (clic)", fallback: { action: "more-info" } },
-      { key: "hold_action", label: "Hold (appui long)", fallback: { action: "more-info" } },
-      { key: "double_tap_action", label: "Double tap", fallback: { action: "none" } },
-    ];
-
-    // On utilise le même composant que l’éditeur natif Lovelace
-    // (déroulant + champs contextuels). C’est plus compatible que ha-selector-action.
-    const hasHuiActionEditor = !!customElements.get("hui-action-editor");
-
-    for (const r of rows) {
-      const current = jp2NormalizeActionConfig(this._config?.[r.key], r.fallback);
-
-      if (hasHuiActionEditor) {
-        const ed = document.createElement("hui-action-editor");
-        try { ed.hass = this._hass; } catch (_) {}
-        try { ed.label = r.label; } catch (_) {}
-        // Selon les versions de HA, la prop s'appelle config ou value.
-        try { ed.config = current; } catch (_) {}
-        try { ed.value = current; } catch (_) {}
-
-        const handler = (ev) => this._onActionEditorChanged(r.key, ev, r.fallback);
-        ed.addEventListener("value-changed", handler);
-        ed.addEventListener("config-changed", handler);
-
-        wrap.appendChild(ed);
-        continue;
-      }
-
-      // Fallback minimal (sans édition JSON) si hui-action-editor n’existe pas.
-      wrap.appendChild(this._basicActionDropdown(r.key, r.label, current, r.fallback));
-    }
-
-    return wrap;
-  }
-
-  _onActionEditorChanged(key, ev, fallback) {
-    if (!this._config) return;
-    try { ev.stopPropagation(); } catch (_) {}
-
-    const detail = ev?.detail ?? {};
-    const raw = (detail.value !== undefined) ? detail.value
-      : (detail.config !== undefined) ? detail.config
-      : (detail.action !== undefined) ? detail.action
-      : undefined;
-
-    const norm = jp2NormalizeActionConfig(raw, fallback);
-
-    const next = deepClone(this._config);
-    next[key] = norm;
-    this._config = next;
-    this._fireConfigChanged(this._config);
-  }
-
-  _basicActionDropdown(key, label, current, fallback) {
-    const row = document.createElement("div");
-    row.style.display = "grid";
-    row.style.gap = "8px";
-
-    const sel = document.createElement("ha-select");
-    sel.label = label;
-
-    const options = [
-      { label: "Aucune", value: "none" },
-      { label: "Plus d’infos", value: "more-info" },
-      { label: "Basculer (toggle)", value: "toggle" },
-      { label: "Naviguer", value: "navigate" },
-      { label: "Ouvrir une URL", value: "url" },
-      { label: "Appeler un service", value: "call-service" },
-      { label: "Fire DOM event", value: "fire-dom-event" },
-    ];
-
-    const curAction = String(current?.action || fallback?.action || "none");
-    sel.value = curAction;
-
-    for (const o of options) {
-      const it = document.createElement("mwc-list-item");
-      it.value = o.value;
-      it.textContent = o.label;
-      sel.appendChild(it);
-    }
-
-    const extra = document.createElement("div");
-    extra.style.display = "grid";
-    extra.style.gap = "8px";
-
-    const tfNav = document.createElement("ha-textfield");
-    tfNav.label = "Chemin de navigation";
-    tfNav.placeholder = "/lovelace/0";
-    tfNav.value = String(current?.navigation_path || "");
-
-    const tfUrl = document.createElement("ha-textfield");
-    tfUrl.label = "URL";
-    tfUrl.placeholder = "https://…";
-    tfUrl.value = String(current?.url_path || "");
-
-    const tfSvc = document.createElement("ha-textfield");
-    tfSvc.label = "Service";
-    tfSvc.placeholder = "light.toggle";
-    tfSvc.value = String(current?.service || "");
-
-    const tfSvcData = document.createElement("ha-textfield");
-    tfSvcData.label = "Service data (JSON)";
-    tfSvcData.placeholder = "{\"entity_id\": \"light.salon\"}";
-    tfSvcData.value = current?.service_data ? jp2SafeStringifyJson(current.service_data) : "";
-
-    const tfEvent = document.createElement("ha-textfield");
-    tfEvent.label = "Event data (JSON)";
-    tfEvent.placeholder = "{...}";
-    tfEvent.value = current?.event_data ? jp2SafeStringifyJson(current.event_data) : "";
-
-    const refreshExtra = (action) => {
-      extra.innerHTML = "";
-      const a = String(action || "none");
-      if (a === "navigate") extra.appendChild(tfNav);
-      else if (a === "url") extra.appendChild(tfUrl);
-      else if (a === "call-service") { extra.appendChild(tfSvc); extra.appendChild(tfSvcData); }
-      else if (a === "fire-dom-event") extra.appendChild(tfEvent);
-    };
-
-    const emit = () => {
-      const a = String(sel.value || "none");
-      let cfg = { action: a };
-      if (a === "navigate") cfg.navigation_path = String(tfNav.value || "");
-      if (a === "url") cfg.url_path = String(tfUrl.value || "");
-      if (a === "call-service") {
-        cfg.service = String(tfSvc.value || "");
-        const parsed = jp2TryParseJson(String(tfSvcData.value || ""));
-        if (parsed !== null) cfg.service_data = parsed;
-      }
-      if (a === "fire-dom-event") {
-        const parsed = jp2TryParseJson(String(tfEvent.value || ""));
-        if (parsed !== null) cfg.event_data = parsed;
-      }
-      cfg = jp2NormalizeActionConfig(cfg, fallback);
-
-      const next = deepClone(this._config);
-      next[key] = cfg;
-      this._config = next;
-      this._fireConfigChanged(this._config);
-    };
-
-    sel.addEventListener("selected", () => { refreshExtra(sel.value); emit(); });
-    sel.addEventListener("value-changed", () => { refreshExtra(sel.value); emit(); });
-
-    tfNav.addEventListener("change", emit);
-    tfUrl.addEventListener("change", emit);
-    tfSvc.addEventListener("change", emit);
-    tfSvcData.addEventListener("change", emit);
-    tfEvent.addEventListener("change", emit);
-
-    refreshExtra(curAction);
-
-    row.appendChild(sel);
-    row.appendChild(extra);
-    return row;
-  }
-
-
-  // -------------------------
   // Schemas (split forms)
   // -------------------------
   _schemaSensorGeneral() {
@@ -4784,6 +4638,79 @@ _schemaCustomPreset() {
     return [
       { name: "aqi_entities", selector: { entity: { domain: "sensor", multiple: true } } },
     ];
+  }
+
+  // -------------------------
+  // Interactions (tap / hold / double tap)
+  // -------------------------
+  _actionsEditor() {
+    const wrap = document.createElement("div");
+    wrap.className = "actions-grid";
+
+    wrap.appendChild(this._actionItem(
+      "tap_action",
+      "Appui (tap)",
+      "more-info"
+    ));
+    wrap.appendChild(this._actionItem(
+      "hold_action",
+      "Appui long (hold)",
+      "more-info"
+    ));
+    wrap.appendChild(this._actionItem(
+      "double_tap_action",
+      "Double appui",
+      "none"
+    ));
+
+    return wrap;
+  }
+
+  _actionItem(actionKey, title, defaultAction) {
+    const item = document.createElement("div");
+    item.className = "actions-item";
+
+    const label = document.createElement("div");
+    label.className = "actions-label";
+    label.textContent = title;
+
+    const allowedActions = ["more-info", "navigate", "url", "perform-action", "assist", "none"]; // no "toggle" ("Permuter")
+
+    // Fallback: if hui-action-editor is not available, use the selector-based ha-form.
+    if (!customElements.get("hui-action-editor")) {
+      const schema = [{
+        name: actionKey,
+        selector: { ui_action: { actions: allowedActions, default_action: defaultAction } },
+      }];
+      item.appendChild(label);
+      item.appendChild(this._makeForm(schema, this._config));
+      return item;
+    }
+
+    const ed = document.createElement("hui-action-editor");
+    ed.actions = allowedActions;
+    ed.defaultAction = defaultAction;
+    ed.hass = this._hass;
+    ed.config = this._config ? this._config[actionKey] : undefined;
+
+    ed.addEventListener("value-changed", (ev) => {
+      ev.stopPropagation();
+      const value = ev?.detail?.value;
+
+      // IMPORTANT: feed back the new config immediately, so the editor shows the
+      // next field (URL / navigation / service...) without requiring a save.
+      try { ev.target.config = value; } catch (_) {}
+
+      const next = { ...(this._config || {}) };
+      if (value === undefined) delete next[actionKey];
+      else next[actionKey] = value;
+      this._config = next;
+      this._fireConfigChanged();
+    });
+
+    item.appendChild(label);
+    item.appendChild(ed);
+    return item;
   }
 
   _aqiEntitiesEditor() {
