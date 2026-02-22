@@ -110,7 +110,7 @@ entities:
 
 <br>
 
-<img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/cac674f3c13a8aca051f7daae961f0056adcc065/docs/images/co2.png" alt="CO2 card preview" width="150px">
+<img src="https://github.com/jp2creation/JP2-Air-Quality-Card/blob/c09c7efcf8b073200ebb09710a9ba12c8b595e97/docs/images/co2.png" alt="CO2 card preview" height="120px">
 
 ```yaml
 type: custom:jp2-air-quality
