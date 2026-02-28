@@ -1,1 +1,124 @@
+name: Bug report
+description: Report a reproducible bug or regression in JP2 Air Quality Card
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug.
 
+        Please fill out the form below with as much detail as possible.
+        Clear and complete reports help reproduce and fix issues faster.
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      description: What version of Home Assistant are you using?
+      placeholder: e.g. 2026.2.4
+    validations:
+      required: true
+
+  - type: input
+    id: card_version
+    attributes:
+      label: JP2 Air Quality Card version
+      description: What version of the card are you using?
+      placeholder: e.g. 1.2.3
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser / device
+      description: Which browser and device are affected?
+      placeholder: e.g. Safari on macOS, Chrome on Android
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: Describe the issue clearly and concisely.
+      placeholder: What is happening?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps to reproduce the problem.
+      placeholder: |
+        1. Add the card to a dashboard
+        2. Set the entity to ...
+        3. Open the visual editor
+        4. Observe the issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: Describe the expected result
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+      placeholder: Describe the actual result
+    validations:
+      required: true
+
+  - type: textarea
+    id: yaml
+    attributes:
+      label: Card configuration
+      description: Paste your Lovelace YAML configuration here. Remove any sensitive information first.
+      render: yaml
+      placeholder: |
+        type: custom:jp2-air-quality
+        entity: sensor.example
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console errors / logs
+      description: Paste browser console errors or relevant logs if available.
+      render: shell
+      placeholder: Paste errors from the browser console here
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Add screenshots or extra context if useful.
+      placeholder: Drag and drop screenshots here or add extra notes
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following before submitting.
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I am using the latest available version of the card.
+          required: false
+        - label: I removed sensitive information from my configuration and logs.
+          required: true

@@ -1,0 +1,68 @@
+name: Feature request
+description: Suggest an improvement or new feature for JP2 Air Quality Card
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement.
+
+        Please explain your idea clearly so it can be reviewed efficiently.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or limitation
+      description: What problem are you trying to solve?
+      placeholder: Describe the current limitation or missing functionality
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the feature or improvement you would like to see.
+      placeholder: Explain your proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Use case / benefit
+      description: How would this improve the card for you or other users?
+      placeholder: Explain why this feature would be useful
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you considered any workaround or alternative approach?
+      placeholder: Describe any alternatives or current workaround
+    validations:
+      required: false
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples, mockups, or references
+      description: Add screenshots, configuration examples, or references if relevant.
+      placeholder: Add examples here
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following before submitting.
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: This request is focused on a single feature or improvement.
+          required: true
